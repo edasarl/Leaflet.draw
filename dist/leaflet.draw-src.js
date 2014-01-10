@@ -983,9 +983,10 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	_onClick: function () {
 		this._fireCreatedEvent();
 
-		this.disable();
-		if (this.options.repeatMode) {
-			this.enable();
+
+		if (!this.options.repeatMode) {
+			// this.enable();
+			this.disable();
 		}
 	},
 
@@ -2069,9 +2070,7 @@ L.Toolbar = L.Class.extend({
 
 	_handlerActivated: function (e) {
 		// Disable active mode (if present)
-		if (this._activeMode && this._activeMode.handler.enabled()) {
-			this._activeMode.handler.disable();
-		}
+		this.disable();
 
 		// Cache new active feature
 		this._activeMode = this._modes[e.handler];
@@ -2411,12 +2410,7 @@ L.EditToolbar = L.Toolbar.extend({
 
 		L.Toolbar.prototype.removeToolbar.call(this);
 	},
-	_handlerActivated: function (e) {
-		if (this._activeMode && this._activeMode.handler.enabled()) {
-			this._activeMode.handler.revertLayers();
-		}
-		L.Toolbar.prototype._handlerActivated.call(this, e);
-	},
+
 	disable: function () {
 		if (!this.enabled()) { return; }
 
