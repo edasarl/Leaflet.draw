@@ -89,9 +89,10 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	_onClick: function () {
 		this._fireCreatedEvent();
 
-		this.disable();
-		if (this.options.repeatMode) {
-			this.enable();
+
+		if (!this.options.repeatMode) {
+			// this.enable();
+			this.disable();
 		}
 	},
 
