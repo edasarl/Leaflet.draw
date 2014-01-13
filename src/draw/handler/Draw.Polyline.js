@@ -43,6 +43,17 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.type = L.Draw.Polyline.TYPE;
 
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
+		var self = this;
+		this._map.on('polyDragStart', function () {
+			if (self._enabled) {
+				self._map.off('click', self._onClick, self);
+			}
+		});
+		this._map.on('polyDragEnd',  function () {
+			if (self._enabled) {
+				setTimeout(function () {self._map.on('click', self._onClick, self); }, 0);
+			}
+		});
 	},
 
 	addHooks: function () {
