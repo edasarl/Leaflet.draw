@@ -64,7 +64,8 @@ var deps = {
 		src: [
 			'edit/EditToolbar.js',
 			'edit/handler/EditToolbar.Edit.js',
-			'edit/handler/EditToolbar.Delete.js'
+			'edit/handler/EditToolbar.Delete.js',
+			'edit/handler/EditToolbar.Navigate.js'
 		],
 		desc: 'Edit toolbar.',
 		deps: ['EditHandlers', 'CommonUI']
