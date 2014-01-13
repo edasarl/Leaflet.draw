@@ -20,26 +20,11 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		L.Draw.Feature.prototype.addHooks.call(this);
 
 		if (this._map) {
-			this._tooltip.updateContent({ text: L.drawLocal.draw.handlers.marker.tooltip.start });
+			this._tooltip.updateContent({ text: L.drawLocal.draw.handlers.marker.tooltip.start});
 
-			// Same mouseMarker as in Draw.Polyline
-			if (!this._mouseMarker) {
-				this._mouseMarker = L.marker(this._map.getCenter(), {
-					icon: L.divIcon({
-						className: 'leaflet-mouse-marker',
-						iconAnchor: [20, 20],
-						iconSize: [40, 40]
-					}),
-					opacity: 0,
-					zIndexOffset: this.options.zIndexOffset
-				});
-			}
-
-			this._mouseMarker
-				.on('click', this._onClick, this)
-				.addTo(this._map);
-
+			this._map._container.style.cursor = 'crosshair';
 			this._map.on('mousemove', this._onMouseMove, this);
+			this._map.on('click', this._onClick, this);
 		}
 	},
 
@@ -47,57 +32,30 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		L.Draw.Feature.prototype.removeHooks.call(this);
 
 		if (this._map) {
-			if (this._marker) {
-				this._marker.off('click', this._onClick, this);
-				this._map
-					.off('click', this._onClick, this)
-					.removeLayer(this._marker);
-				delete this._marker;
-			}
-
-			this._mouseMarker.off('click', this._onClick, this);
-			this._map.removeLayer(this._mouseMarker);
-			delete this._mouseMarker;
-
+			this._map._container.style.cursor = null;
+			this._map.off('click', this._onClick, this);
 			this._map.off('mousemove', this._onMouseMove, this);
 		}
 	},
 
 	_onMouseMove: function (e) {
-		var latlng = e.latlng;
-
-		this._tooltip.updatePosition(latlng);
-		this._mouseMarker.setLatLng(latlng);
-
-		if (!this._marker) {
-			this._marker = new L.Marker(latlng, {
-				icon: this.options.icon,
-				zIndexOffset: this.options.zIndexOffset
-			});
-			// Bind to both marker and map to make sure we get the click event.
-			this._marker.on('click', this._onClick, this);
-			this._map
-				.on('click', this._onClick, this)
-				.addLayer(this._marker);
-		}
-		else {
-			latlng = this._mouseMarker.getLatLng();
-			this._marker.setLatLng(latlng);
-		}
+		this.latlng = e.latlng;
+		this._tooltip.updatePosition(this.latlng);
 	},
 
 	_onClick: function () {
 		this._fireCreatedEvent();
 
-
 		if (!this.options.repeatMode) {
-			// this.enable();
 			this.disable();
+		} else {
+			this.removeHooks();
+			this.addHooks();
 		}
 	},
 
 	_fireCreatedEvent: function () {
-		var marker = new L.Marker(this._marker.getLatLng(), { icon: this.options.icon });
+		var marker = new L.Marker(this.latlng, { icon: this.options.icon});
 		L.Draw.Feature.prototype._fireCreatedEvent.call(this, marker);
 	}
 });

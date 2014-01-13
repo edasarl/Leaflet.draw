@@ -35,13 +35,13 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 		}
 
 		// Add and update the double click handler
-		if (markerCount > 2) {
-			this._markers[markerCount - 1].on('dblclick', this._finishShape, this);
-			// Only need to remove handler if has been added before
-			if (markerCount > 3) {
-				this._markers[markerCount - 2].off('dblclick', this._finishShape, this);
-			}
-		}
+		// if (markerCount > 2) {
+		// 	this._markers[markerCount - 1].on('dblclick', this._finishShape, this);
+		// 	// Only need to remove handler if has been added before
+		// 	if (markerCount > 3) {
+		// 		this._markers[markerCount - 2].off('dblclick', this._finishShape, this);
+		// 	}
+		// }
 	},
 
 	_getTooltipText: function () {
@@ -93,9 +93,22 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 		if (markerCount > 0) {
 			this._markers[0].off('click', this._finishShape, this);
 
-			if (markerCount > 2) {
-				this._markers[markerCount - 1].off('dblclick', this._finishShape, this);
-			}
+			// if (markerCount > 2) {
+			// 	this._markers[markerCount - 1].off('dblclick', this._finishShape, this);
+			// }
 		}
 	}
+	// ,
+	// _fireCreatedEvent: function () {
+	// 	var poly = new this.builder(this._poly.getLatLngs(), this.options.shapeOptions);
+	// 	L.Draw.Feature.prototype._fireCreatedEvent.call(this, poly);
+	// },
+	// _finishPoly: function () {
+	// 	this.builder = L.Polygon;
+	// 	this._finishShape();
+	// },
+	// _finishLine: function () {
+	// 	this.builder = L.Polyline;
+	// 	this._finishShape();
+	// }
 });

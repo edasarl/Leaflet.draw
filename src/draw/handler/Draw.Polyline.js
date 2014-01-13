@@ -56,28 +56,29 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			this._poly = new L.Polyline([], this.options.shapeOptions);
 
 			this._tooltip.updateContent(this._getTooltipText());
+			this._map._container.style.cursor = 'crosshair';
 
 			// Make a transparent marker that will used to catch click events. These click
 			// events will create the vertices. We need to do this so we can ensure that
 			// we can create vertices over other map layers (markers, vector layers). We
 			// also do not want to trigger any click handlers of objects we are clicking on
 			// while drawing.
-			if (!this._mouseMarker) {
-				this._mouseMarker = L.marker(this._map.getCenter(), {
-					icon: L.divIcon({
-						className: 'leaflet-mouse-marker',
-						iconAnchor: [20, 20],
-						iconSize: [40, 40]
-					}),
-					opacity: 0,
-					zIndexOffset: this.options.zIndexOffset
-				});
-			}
+			// if (!this._mouseMarker) {
+			// 	this._mouseMarker = L.marker(this._map.getCenter(), {
+			// 		icon: L.divIcon({
+			// 			className: 'leaflet-mouse-marker',
+			// 			iconAnchor: [20, 20],
+			// 			iconSize: [40, 40]
+			// 		}),
+			// 		opacity: 0,
+			// 		zIndexOffset: this.options.zIndexOffset
+			// 	});
+			// }
 
-			this._mouseMarker
-				.on('click', this._onClick, this)
-				.addTo(this._map);
-
+			// this._mouseMarker
+			// 	.on('click', this._onClick, this)
+			// 	.addTo(this._map);
+			this._map.on('click', this._onClick, this);
 			this._map
 				.on('mousemove', this._onMouseMove, this)
 				.on('zoomend', this._onZoomEnd, this);
@@ -99,16 +100,18 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._map.removeLayer(this._poly);
 		delete this._poly;
 
-		this._mouseMarker.off('click', this._onClick, this);
-		this._map.removeLayer(this._mouseMarker);
-		delete this._mouseMarker;
+		// this._mouseMarker.off('click', this._onClick, this);
+		// this._map.removeLayer(this._mouseMarker);
+		// delete this._mouseMarker;
 
 		// clean up DOM
 		this._clearGuides();
 
 		this._map
 			.off('mousemove', this._onMouseMove, this)
-			.off('zoomend', this._onZoomEnd, this);
+			.off('zoomend', this._onZoomEnd, this)
+			.off('click', this._onClick, this);
+		this._map._container.style.cursor = null;
 	},
 
 	deleteLastVertex: function () {
@@ -160,9 +163,11 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 
 		this._fireCreatedEvent();
-		this.disable();
-		if (this.options.repeatMode) {
-			this.enable();
+		if (!this.options.repeatMode) {
+			this.disable();
+		} else {
+			this.removeHooks();
+			this.addHooks();
 		}
 	},
 
@@ -190,13 +195,14 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._updateGuide(newPos);
 
 		// Update the mouse marker position
-		this._mouseMarker.setLatLng(latlng);
+		// this._mouseMarker.setLatLng(latlng);
 
 		L.DomEvent.preventDefault(e.originalEvent);
 	},
 
 	_onClick: function (e) {
-		var latlng = e.target.getLatLng();
+		// console.log(e);
+		var latlng = e.latlng || e.target.getLatLng();
 
 		this.addVertex(latlng);
 	},
