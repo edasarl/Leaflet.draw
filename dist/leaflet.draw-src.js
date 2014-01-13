@@ -229,6 +229,17 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.type = L.Draw.Polyline.TYPE;
 
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
+		var self = this;
+		this._map.on('polyDragStart', function () {
+			if (self._enabled) {
+				self._map.off('click', self._onClick, self);
+			}
+		});
+		this._map.on('polyDragEnd',  function () {
+			if (self._enabled) {
+				setTimeout(function () {self._map.on('click', self._onClick, self); }, 0);
+			}
+		});
 	},
 
 	addHooks: function () {
@@ -1811,8 +1822,8 @@ L.Control.Draw = L.Control.extend({
 		this._toolbars = {};
 
 		// Initialize toolbars
-		if (L.DrawToolbar && this.options.draw) {
-			toolbar = new L.DrawToolbar(this.options.draw);
+		if (L.EditToolbar && this.options.edit) {
+			toolbar = new L.EditToolbar(this.options.edit);
 			id = L.stamp(toolbar);
 			this._toolbars[id] = toolbar;
 
@@ -1820,8 +1831,8 @@ L.Control.Draw = L.Control.extend({
 			this._toolbars[id].on('enable', this._toolbarEnabled, this);
 		}
 
-		if (L.EditToolbar && this.options.edit) {
-			toolbar = new L.EditToolbar(this.options.edit);
+		if (L.DrawToolbar && this.options.draw) {
+			toolbar = new L.DrawToolbar(this.options.draw);
 			id = L.stamp(toolbar);
 			this._toolbars[id] = toolbar;
 
@@ -2346,24 +2357,39 @@ L.EditToolbar = L.Toolbar.extend({
 				title: L.drawLocal.edit.toolbar.buttons.edit
 			},
 			{
+				enabled: this.options.navigate,
+				handler: new L.EditToolbar.Navigate(map, {}),
+				title: L.drawLocal.edit.toolbar.buttons.navigate
+			},
+			{
 				enabled: this.options.remove,
 				handler: new L.EditToolbar.Delete(map, {
 					featureGroup: featureGroup
 				}),
 				title: L.drawLocal.edit.toolbar.buttons.remove
+			},
+			{
+				enabled: this.options.style,
+				handler: new L.EditToolbar.Style(map, {
+					featureGroup: featureGroup,
+					panel: this.options.style.panel
+				}),
+				title: L.drawLocal.edit.toolbar.buttons.style
 			}
 		];
 	},
 
-	getActions: function () {
+	getActions: function (handler) {
 		return [
 			{
+				enabled: handler.type !== 'navigate',
 				title: L.drawLocal.edit.toolbar.actions.save.title,
 				text: L.drawLocal.edit.toolbar.actions.save.text,
 				callback: this._save,
 				context: this
 			},
 			{
+				enabled: handler.type !== 'navigate',
 				title: L.drawLocal.edit.toolbar.actions.cancel.title,
 				text: L.drawLocal.edit.toolbar.actions.cancel.text,
 				callback: this.disable,
@@ -2811,6 +2837,56 @@ L.EditToolbar.Delete = L.Handler.extend({
 
 	_hasAvailableLayers: function () {
 		return this._deletableLayers.getLayers().length !== 0;
+	}
+});
+
+
+L.EditToolbar.Navigate = L.Handler.extend({
+	statics: {
+		TYPE: 'navigate' // not delete as delete is reserved in js
+	},
+
+	includes: L.Mixin.Events,
+
+	initialize: function (map, options) {
+		L.Handler.prototype.initialize.call(this, map);
+
+		L.Util.setOptions(this, options);
+
+		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
+		this.type = L.EditToolbar.Navigate.TYPE;
+	},
+
+	enable: function () {
+		if (this._enabled) {
+			return;
+		}
+		this.fire('enabled', { handler: this.type});
+			//this disable other handlers
+
+		this._map.fire('draw:navigatestart', { handler: this.type });
+
+		L.Handler.prototype.enable.call(this);
+	},
+
+	disable: function () {
+		if (!this._enabled) { return; }
+		L.Handler.prototype.disable.call(this);
+		this._map.fire('draw:navigatestop', { handler: this.type });
+		this.fire('disabled', { handler: this.type});
+	},
+
+	addHooks: function () {
+		var map = this._map;
+
+		if (map) {
+			map.getContainer().focus();
+		}
+	},
+
+	removeHooks: function () {
+	},
+	revertLayers: function () {
 	}
 });
 
