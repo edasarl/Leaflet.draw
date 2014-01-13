@@ -50,24 +50,39 @@ L.EditToolbar = L.Toolbar.extend({
 				title: L.drawLocal.edit.toolbar.buttons.edit
 			},
 			{
+				enabled: this.options.navigate,
+				handler: new L.EditToolbar.Navigate(map, {}),
+				title: L.drawLocal.edit.toolbar.buttons.navigate
+			},
+			{
 				enabled: this.options.remove,
 				handler: new L.EditToolbar.Delete(map, {
 					featureGroup: featureGroup
 				}),
 				title: L.drawLocal.edit.toolbar.buttons.remove
+			},
+			{
+				enabled: this.options.style,
+				handler: new L.EditToolbar.Style(map, {
+					featureGroup: featureGroup,
+					panel: this.options.style.panel
+				}),
+				title: L.drawLocal.edit.toolbar.buttons.style
 			}
 		];
 	},
 
-	getActions: function () {
+	getActions: function (handler) {
 		return [
 			{
+				enabled: handler.type !== 'navigate',
 				title: L.drawLocal.edit.toolbar.actions.save.title,
 				text: L.drawLocal.edit.toolbar.actions.save.text,
 				callback: this._save,
 				context: this
 			},
 			{
+				enabled: handler.type !== 'navigate',
 				title: L.drawLocal.edit.toolbar.actions.cancel.title,
 				text: L.drawLocal.edit.toolbar.actions.cancel.text,
 				callback: this.disable,
