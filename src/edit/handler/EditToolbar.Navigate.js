@@ -44,5 +44,6 @@ L.EditToolbar.Navigate = L.Handler.extend({
 	removeHooks: function () {
 	},
 	revertLayers: function () {
-	}
+	},
+	save: function () {}
 });
