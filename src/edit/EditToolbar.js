@@ -97,7 +97,9 @@ L.EditToolbar = L.Toolbar.extend({
 		this._checkDisabled();
 
 		this.options.featureGroup.on('layeradd layerremove', this._checkDisabled, this);
-
+		if (this._modes.navigate) {
+			this._modes.navigate.handler.enable();
+		}
 		return container;
 	},
 
