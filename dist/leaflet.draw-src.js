@@ -2392,7 +2392,7 @@ L.EditToolbar = L.Toolbar.extend({
 				enabled: handler.type !== 'navigate',
 				title: L.drawLocal.edit.toolbar.actions.cancel.title,
 				text: L.drawLocal.edit.toolbar.actions.cancel.text,
-				callback: this.disable,
+				callback: this.cancel,
 				context: this
 			}
 		];
@@ -2404,7 +2404,9 @@ L.EditToolbar = L.Toolbar.extend({
 		this._checkDisabled();
 
 		this.options.featureGroup.on('layeradd layerremove', this._checkDisabled, this);
-
+		if (this._modes.navigate) {
+			this._modes.navigate.handler.enable();
+		}
 		return container;
 	},
 
@@ -2413,18 +2415,19 @@ L.EditToolbar = L.Toolbar.extend({
 
 		L.Toolbar.prototype.removeToolbar.call(this);
 	},
-
+	cancel: function () {
+		if (!this.enabled()) { return; }
+		this._activeMode.handler.revertLayers();
+	},
 	disable: function () {
 		if (!this.enabled()) { return; }
 
-		this._activeMode.handler.revertLayers();
-
+		this._activeMode.handler.save();
 		L.Toolbar.prototype.disable.call(this);
 	},
 
 	_save: function () {
 		this._activeMode.handler.save();
-		this._activeMode.handler.disable();
 	},
 
 	_checkDisabled: function () {
@@ -2887,7 +2890,8 @@ L.EditToolbar.Navigate = L.Handler.extend({
 	removeHooks: function () {
 	},
 	revertLayers: function () {
-	}
+	},
+	save: function () {}
 });
 
 
