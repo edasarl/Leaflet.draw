@@ -98,7 +98,10 @@ L.EditToolbar = L.Toolbar.extend({
 
 		this.options.featureGroup.on('layeradd layerremove', this._checkDisabled, this);
 		if (this._modes.navigate) {
-			this._modes.navigate.handler.enable();
+			var self = this;
+			map.on('navigation', function () {
+				self._modes.navigate.handler.enable();
+			});
 		}
 		return container;
 	},
