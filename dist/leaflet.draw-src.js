@@ -121,6 +121,7 @@ L.Draw.Feature = L.Handler.extend({
 			options.shapeOptions = L.Util.extend({}, this.options.shapeOptions, options.shapeOptions);
 		}
 		L.setOptions(this, options);
+		this._uneditedLayerProps = {};
 	},
 
 	enable: function () {
@@ -142,7 +143,45 @@ L.Draw.Feature = L.Handler.extend({
 
 		this.fire('disabled', { handler: this.type });
 	},
+	_propagateEvent: function (e) {
+		this._map.fire('click', e);
+	},
+	_backupLayer: function (layer) {
+		var id = L.Util.stamp(layer);
 
+		if (!this._uneditedLayerProps[id]) {
+			// Polyline, Polygon or Rectangle
+			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+				this._uneditedLayerProps[id] = {
+					latlngs: L.LatLngUtil.cloneLatLngs(layer.getLatLngs())
+				};
+			} else if (layer instanceof L.Circle) {
+				this._uneditedLayerProps[id] = {
+					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng()),
+					radius: layer.getRadius()
+				};
+			} else { // Marker
+				this._uneditedLayerProps[id] = {
+					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng())
+				};
+			}
+		}
+	},
+	_revertLayer: function (layer) {
+		var id = L.Util.stamp(layer);
+		layer.edited = false;
+		if (this._uneditedLayerProps.hasOwnProperty(id)) {
+			// Polyline, Polygon or Rectangle
+			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
+			} else if (layer instanceof L.Circle) {
+				layer.setLatLng(this._uneditedLayerProps[id].latlng);
+				layer.setRadius(this._uneditedLayerProps[id].radius);
+			} else { // Marker
+				layer.setLatLng(this._uneditedLayerProps[id].latlng);
+			}
+		}
+	},
 	addHooks: function () {
 		var map = this._map;
 
@@ -165,6 +204,8 @@ L.Draw.Feature = L.Handler.extend({
 			this._tooltip = null;
 
 			L.DomEvent.off(this._container, 'keyup', this._cancelDrawing, this);
+			// Clear the backups of the original layers
+			this._uneditedLayerProps = {};
 		}
 	},
 
@@ -312,7 +353,13 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	},
 
 	deleteLastVertex: function () {
-		if (this._markers.length <= 1) {
+		if (this._markers.length === 0) {
+			return;
+		}
+
+		if (this._markers.length === 1) {
+			this.removeHooks();
+			this.addHooks();
 			return;
 		}
 
@@ -933,22 +980,55 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		zIndexOffset: 2000 // This should be > than the highest z-index any markers
 	},
 
-	initialize: function (map, options) {
+	initialize: function (map, options, featureGroup) {
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Marker.TYPE;
 
+		this.drawLayer = L.featureGroup();
+		this.editedLayers = L.layerGroup();
+		this.globalDrawLayer = featureGroup;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
-
+	_enableDrag: function (e) {
+		var layer = e.layer || e;
+		if (layer instanceof L.Marker) {
+			layer.dragging.enable();
+			this._backupLayer(layer);
+			layer.on('dragend', this.onDragEnd, this);
+		}
+	},
+	_disableDrag: function (e) {
+		var layer = e.layer || e;
+		if (layer instanceof L.Marker) {
+			layer.dragging.disable();
+			layer.off('dragend', this.onDragEnd, this);
+		}
+	},
+	onDragEnd: function (e) {
+		var layer = e.target;
+		this.editedLayers.addLayer(layer);
+		layer.edited = true;
+	},
+	revertLayers: function () {
+		this.globalDrawLayer.eachLayer(function (layer) {
+			if (layer instanceof L.Marker) {
+				this._revertLayer(layer);
+			}
+		}, this);
+	},
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
-
 		if (this._map) {
 			this._tooltip.updateContent({ text: L.drawLocal.draw.handlers.marker.tooltip.start});
 
 			this._map._container.style.cursor = 'crosshair';
 			this._map.on('mousemove', this._onMouseMove, this);
 			this._map.on('click', this._onClick, this);
+
+			this.drawLayer.addTo(this._map);
+			this.globalDrawLayer.eachLayer(this._enableDrag, this);
+			this.globalDrawLayer.on('layeradd', this._enableDrag, this);
+			this.globalDrawLayer.on('click', this._propagateEvent, this);
 		}
 	},
 
@@ -956,9 +1036,24 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		L.Draw.Feature.prototype.removeHooks.call(this);
 
 		if (this._map) {
+			this.globalDrawLayer.off('click', this._propagateEvent, this);
+			this.globalDrawLayer.eachLayer(this._disableDrag, this);
+			this.globalDrawLayer.off('layeradd', this._enableDrag, this);
+
 			this._map._container.style.cursor = null;
 			this._map.off('click', this._onClick, this);
 			this._map.off('mousemove', this._onMouseMove, this);
+			var self = this;
+			this.drawLayer.eachLayer(function (marker) {
+				L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
+			});
+			this._map.fire('draw:edited', {layers: this.editedLayers});
+			this.editedLayers.eachLayer(function (marker) {
+				delete marker.edited;
+			});
+			this.drawLayer.clearLayers();
+			this.editedLayers.clearLayers();
+			this._map.removeLayer(this.drawLayer);
 		}
 	},
 
@@ -972,15 +1067,20 @@ L.Draw.Marker = L.Draw.Feature.extend({
 
 		if (!this.options.repeatMode) {
 			this.disable();
-		} else {
-			this.removeHooks();
-			this.addHooks();
 		}
 	},
-
+	cancel: function () {
+		this.drawLayer.clearLayers();
+		this.revertLayers();
+	},
 	_fireCreatedEvent: function () {
-		var marker = new L.Marker(this.latlng, { icon: this.options.icon});
-		L.Draw.Feature.prototype._fireCreatedEvent.call(this, marker);
+		var marker = new L.Marker(this.latlng);
+
+		var style = this._map.defaultStyles && this._map.defaultStyles.marker;
+		if (style) {marker.data({style: style}); }
+
+		this.drawLayer.addLayer(marker);
+		marker.dragging.enable();
 	}
 });
 
@@ -2243,9 +2343,14 @@ L.DrawToolbar = L.Toolbar.extend({
 		this._toolbarClass = 'leaflet-draw-draw';
 		L.Toolbar.prototype.initialize.call(this, options);
 	},
-
 	getModeHandlers: function (map) {
+		var featureGroup = this.options.featureGroup;
 		return [
+			{
+				enabled: this.options.marker,
+				handler: new L.Draw.Marker(map, this.options.marker, featureGroup),
+				title: L.drawLocal.draw.toolbar.buttons.marker
+			},
 			{
 				enabled: this.options.polyline,
 				handler: new L.Draw.Polyline(map, this.options.polyline),
@@ -2265,11 +2370,6 @@ L.DrawToolbar = L.Toolbar.extend({
 				enabled: this.options.circle,
 				handler: new L.Draw.Circle(map, this.options.cicle),
 				title: L.drawLocal.draw.toolbar.buttons.circle
-			},
-			{
-				enabled: this.options.marker,
-				handler: new L.Draw.Marker(map, this.options.marker),
-				title: L.drawLocal.draw.toolbar.buttons.marker
 			}
 		];
 	},
@@ -2287,12 +2387,17 @@ L.DrawToolbar = L.Toolbar.extend({
 			{
 				title: L.drawLocal.draw.toolbar.actions.title,
 				text: L.drawLocal.draw.toolbar.actions.text,
-				callback: this.disable,
+				callback: this.cancel,
 				context: this
 			}
 		];
 	},
+	cancel: function () {
+		this._activeMode.handler.cancel();
+	},
+	save: function () {
 
+	},
 	setOptions: function (options) {
 		L.setOptions(this, options);
 
@@ -2405,7 +2510,10 @@ L.EditToolbar = L.Toolbar.extend({
 
 		this.options.featureGroup.on('layeradd layerremove', this._checkDisabled, this);
 		if (this._modes.navigate) {
-			this._modes.navigate.handler.enable();
+			var self = this;
+			map.on('navigation', function () {
+				self._modes.navigate.handler.enable();
+			});
 		}
 		return container;
 	},
