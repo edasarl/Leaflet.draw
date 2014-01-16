@@ -126,7 +126,13 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	},
 
 	deleteLastVertex: function () {
-		if (this._markers.length <= 1) {
+		if (this._markers.length === 0) {
+			return;
+		}
+
+		if (this._markers.length === 1) {
+			this.removeHooks();
+			this.addHooks();
 			return;
 		}
 
