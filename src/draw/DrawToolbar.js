@@ -21,9 +21,14 @@ L.DrawToolbar = L.Toolbar.extend({
 		this._toolbarClass = 'leaflet-draw-draw';
 		L.Toolbar.prototype.initialize.call(this, options);
 	},
-
 	getModeHandlers: function (map) {
+		var featureGroup = this.options.featureGroup;
 		return [
+			{
+				enabled: this.options.marker,
+				handler: new L.Draw.Marker(map, this.options.marker, featureGroup),
+				title: L.drawLocal.draw.toolbar.buttons.marker
+			},
 			{
 				enabled: this.options.polyline,
 				handler: new L.Draw.Polyline(map, this.options.polyline),
@@ -43,11 +48,6 @@ L.DrawToolbar = L.Toolbar.extend({
 				enabled: this.options.circle,
 				handler: new L.Draw.Circle(map, this.options.cicle),
 				title: L.drawLocal.draw.toolbar.buttons.circle
-			},
-			{
-				enabled: this.options.marker,
-				handler: new L.Draw.Marker(map, this.options.marker),
-				title: L.drawLocal.draw.toolbar.buttons.marker
 			}
 		];
 	},
@@ -65,12 +65,17 @@ L.DrawToolbar = L.Toolbar.extend({
 			{
 				title: L.drawLocal.draw.toolbar.actions.title,
 				text: L.drawLocal.draw.toolbar.actions.text,
-				callback: this.disable,
+				callback: this.cancel,
 				context: this
 			}
 		];
 	},
+	cancel: function () {
+		this._activeMode.handler.cancel();
+	},
+	save: function () {
 
+	},
 	setOptions: function (options) {
 		L.setOptions(this, options);
 
