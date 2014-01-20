@@ -1077,7 +1077,9 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		var marker = new L.Marker(this.latlng);
 
 		var style = this._map.defaultStyles && this._map.defaultStyles.marker;
-		if (style) {marker.data({style: style}); }
+		if (style) {
+			marker.setStyle(style);
+		}
 
 		this.drawLayer.addLayer(marker);
 		marker.dragging.enable();
