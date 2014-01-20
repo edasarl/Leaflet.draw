@@ -30,7 +30,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		zIndexOffset: 2000 // This should be > than the highest z-index any map layers
 	},
 
-	initialize: function (map, options) {
+	initialize: function (map, options, featureGroup) {
 		// Need to set this here to ensure the correct message is used.
 		this.options.drawError.message = L.drawLocal.draw.handlers.polyline.error;
 
@@ -41,7 +41,10 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Polyline.TYPE;
-
+		this.globalDrawLayer = featureGroup;
+		this.drawLayer = L.featureGroup();
+		this.editedLayers = L.layerGroup();
+		this.tooltip = options.tooltip;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
 		this._map.on('polyDragStart', function () {
@@ -58,42 +61,33 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
+		this.globalDrawLayer
+			.on('layeradd', this._enableLayerEdit, this);
 		if (this._map) {
+			this.backup();
 			this._markers = [];
 
 			this._markerGroup = new L.LayerGroup();
 			this._map.addLayer(this._markerGroup);
 
 			this._poly = new L.Polyline([], this.options.shapeOptions);
-
-			this._tooltip.updateContent(this._getTooltipText());
+			this.tooltip.innerHTML = this._getTooltipText().text;
 			this._map._container.style.cursor = 'crosshair';
-
-			// Make a transparent marker that will used to catch click events. These click
-			// events will create the vertices. We need to do this so we can ensure that
-			// we can create vertices over other map layers (markers, vector layers). We
-			// also do not want to trigger any click handlers of objects we are clicking on
-			// while drawing.
-			// if (!this._mouseMarker) {
-			// 	this._mouseMarker = L.marker(this._map.getCenter(), {
-			// 		icon: L.divIcon({
-			// 			className: 'leaflet-mouse-marker',
-			// 			iconAnchor: [20, 20],
-			// 			iconSize: [40, 40]
-			// 		}),
-			// 		opacity: 0,
-			// 		zIndexOffset: this.options.zIndexOffset
-			// 	});
-			// }
-
-			// this._mouseMarker
-			// 	.on('click', this._onClick, this)
-			// 	.addTo(this._map);
 			this._map.on('click', this._onClick, this);
 			this._map
 				.on('mousemove', this._onMouseMove, this)
 				.on('zoomend', this._onZoomEnd, this);
 		}
+	},
+	backup: function () {
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (layer) {
+			self._enableLayerEdit(layer);
+		});
+	},
+	_enableLayerEdit: function (e) {
+		var layer = e.layer || e;
+		this._backupLayer(layer);
 	},
 
 	removeHooks: function () {
@@ -111,10 +105,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._map.removeLayer(this._poly);
 		delete this._poly;
 
-		// this._mouseMarker.off('click', this._onClick, this);
-		// this._map.removeLayer(this._mouseMarker);
-		// delete this._mouseMarker;
-
 		// clean up DOM
 		this._clearGuides();
 
@@ -123,8 +113,10 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			.off('zoomend', this._onZoomEnd, this)
 			.off('click', this._onClick, this);
 		this._map._container.style.cursor = null;
+		this.save();
+		this.globalDrawLayer
+			.off('layeradd', this._enableLayerEdit, this);
 	},
-
 	deleteLastVertex: function () {
 		if (this._markers.length === 0) {
 			return;
@@ -183,8 +175,18 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		if (!this.options.repeatMode) {
 			this.disable();
 		} else {
-			this.removeHooks();
-			this.addHooks();
+			this._clearHideErrorTimeout();
+
+			this._cleanUpShape();
+			this._markerGroup.clearLayers();
+			this._map.removeLayer(this._poly);
+
+			// clean up DOM
+			this._clearGuides();
+			this._markers = [];
+
+			this._poly = new L.Polyline([], this.options.shapeOptions);
+			this.tooltip.innerHTML = this._getTooltipText().text;
 		}
 	},
 
@@ -206,7 +208,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		// should this be moved to _updateGuide() ?
 		this._currentLatLng = latlng;
 
-		this._updateTooltip(latlng);
+		// this._updateTooltip(latlng);
 
 		// Update the guide line
 		this._updateGuide(newPos);
@@ -273,15 +275,15 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 	},
 
-	_updateTooltip: function (latLng) {
-		var text = this._getTooltipText();
+	_updateTooltip: function () {
+		var text = this._getTooltipText().text;
 
-		if (latLng) {
-			this._tooltip.updatePosition(latLng);
-		}
+		// if (latLng) {
+		// 	this._tooltip.updatePosition(latLng);
+		// }
 
 		if (!this._errorShown) {
-			this._tooltip.updateContent(text);
+			this.tooltip.innerHTML = text;
 		}
 	},
 
@@ -389,9 +391,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._errorShown = true;
 
 		// Update tooltip
-		this._tooltip
-			.showAsError()
-			.updateContent({ text: this.options.drawError.message });
+		this.tooltip.innerHTML = this.options.drawError.message;
 
 		// Update shape
 		this._updateGuideColor(this.options.drawError.color);
@@ -408,9 +408,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._clearHideErrorTimeout();
 
 		// Revert tooltip
-		this._tooltip
-			.removeError()
-			.updateContent(this._getTooltipText());
+		this.tooltip.innerHTML = this._getTooltipText().text;
 
 		// Revert shape
 		this._updateGuideColor(this.options.shapeOptions.color);
@@ -432,6 +430,45 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_fireCreatedEvent: function () {
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
-		L.Draw.Feature.prototype._fireCreatedEvent.call(this, poly);
+		this.globalDrawLayer.addLayer(poly);
+		this.drawLayer.addLayer(poly);
+	},
+	save: function () {
+		var self = this;
+
+		var editedLayers = new L.LayerGroup();
+
+		this.globalDrawLayer.eachLayer(function (layer) {
+			if (layer.edited) {
+				if (layer.saveId) {
+					editedLayers.addLayer(layer);
+				}
+				layer.edited = false;
+			}
+		});
+		this._map.fire('draw:edited', {layers: editedLayers});
+
+		this.drawLayer.eachLayer(function (layer) {
+			L.Draw.Feature.prototype._fireCreatedEvent.call(self, layer);
+			self.globalDrawLayer.removeLayer(layer);
+		});
+		this.drawLayer.clearLayers();
+		this._uneditedLayerProps = {};
+	},
+	cancel: function () {
+		var self = this;
+		this.drawLayer.eachLayer(function (layer) {
+			self.globalDrawLayer.removeLayer(layer);
+		});
+		this.drawLayer.clearLayers();
+		this.revertLayers();
+	},
+	revertLayers: function () {
+		this.globalDrawLayer.eachLayer(function (layer) {
+			if (layer instanceof L.Polyline) {
+				this._revertLayer(layer);
+				layer.editing.updateMarkers();
+			}
+		}, this);
 	}
 });

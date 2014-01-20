@@ -19,8 +19,8 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 		}
 	},
 
-	initialize: function (map, options) {
-		L.Draw.Polyline.prototype.initialize.call(this, map, options);
+	initialize: function (map, options, featureGroup) {
+		L.Draw.Polyline.prototype.initialize.call(this, map, options, featureGroup);
 
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Polygon.TYPE;
@@ -97,6 +97,14 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 			// 	this._markers[markerCount - 1].off('dblclick', this._finishShape, this);
 			// }
 		}
+	},
+	revertLayers: function () {
+		this.globalDrawLayer.eachLayer(function (layer) {
+			if (layer instanceof L.Polygon) {
+				this._revertLayer(layer);
+				layer.editing.updateMarkers();
+			}
+		}, this);
 	}
 	// ,
 	// _fireCreatedEvent: function () {
