@@ -36,9 +36,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			self._startLatLng = llstart;
 			self._drawShape(llend);
 			self._fireCreatedEvent(e);
-			self.save();
 			self.removeHooks();
-			self.disable();
 		});
 	},
 	addHooks: function () {
