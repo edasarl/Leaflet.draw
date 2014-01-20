@@ -54,7 +54,8 @@ var deps = {
 
 	DrawUI: {
 		src: [
-			'draw/DrawToolbar.js'
+			'draw/DrawToolbar.js',
+			'draw/ViewToolbar.js'
 		],
 		desc: 'Draw toolbar.',
 		deps: ['DrawHandlers', 'CommonUI']
