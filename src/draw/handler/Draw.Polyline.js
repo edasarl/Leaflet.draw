@@ -220,7 +220,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	},
 
 	_onClick: function (e) {
-		// console.log(e);
 		var latlng = e.latlng || e.target.getLatLng();
 
 		this.addVertex(latlng);
@@ -462,10 +461,12 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		});
 		this.drawLayer.clearLayers();
 		this.revertLayers();
+		this._uneditedLayerProps = {};
+		this.backup();
 	},
 	revertLayers: function () {
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Polyline) {
+			if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
 				this._revertLayer(layer);
 				layer.editing.updateMarkers();
 			}
