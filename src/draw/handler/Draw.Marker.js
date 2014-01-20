@@ -16,13 +16,14 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.globalDrawLayer = featureGroup;
+		this.tooltip = options.tooltip;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
 	_enableDrag: function (e) {
 		var layer = e.layer || e;
 		if (layer instanceof L.Marker) {
 			layer.dragging.enable();
-			this._backupLayer(layer);
+			layer.on('dragstart', this._backupLayer, this);
 			layer.on('dragend', this.onDragEnd, this);
 		}
 	},
@@ -31,6 +32,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		if (layer instanceof L.Marker) {
 			layer.dragging.disable();
 			layer.off('dragend', this.onDragEnd, this);
+			layer.off('dragstart', this._backupLayer, this);
 		}
 	},
 	onDragEnd: function (e) {
@@ -48,8 +50,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
 		if (this._map) {
-			this._tooltip.updateContent({ text: L.drawLocal.draw.handlers.marker.tooltip.start});
-
+			this.tooltip.innerHTML = L.drawLocal.draw.handlers.marker.tooltip.start;
 			this._map._container.style.cursor = 'crosshair';
 			this._map.on('mousemove', this._onMouseMove, this);
 			this._map.on('click', this._onClick, this);
@@ -72,23 +73,13 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			this._map._container.style.cursor = null;
 			this._map.off('click', this._onClick, this);
 			this._map.off('mousemove', this._onMouseMove, this);
-			var self = this;
-			this.drawLayer.eachLayer(function (marker) {
-				L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
-			});
-			this._map.fire('draw:edited', {layers: this.editedLayers});
-			this.editedLayers.eachLayer(function (marker) {
-				delete marker.edited;
-			});
-			this.drawLayer.clearLayers();
-			this.editedLayers.clearLayers();
+			this.save();
 			this._map.removeLayer(this.drawLayer);
 		}
 	},
 
 	_onMouseMove: function (e) {
 		this.latlng = e.latlng;
-		this._tooltip.updatePosition(this.latlng);
 	},
 
 	_onClick: function () {
@@ -101,6 +92,19 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	cancel: function () {
 		this.drawLayer.clearLayers();
 		this.revertLayers();
+	},
+	save: function () {
+		var self = this;
+		this.drawLayer.eachLayer(function (marker) {
+			L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
+		});
+		this._map.fire('draw:edited', {layers: this.editedLayers});
+		this.editedLayers.eachLayer(function (marker) {
+			delete marker.edited;
+		});
+		this.drawLayer.clearLayers();
+		this.editedLayers.clearLayers();
+		this._uneditedLayerProps = {};
 	},
 	_fireCreatedEvent: function () {
 		var marker = new L.Marker(this.latlng);

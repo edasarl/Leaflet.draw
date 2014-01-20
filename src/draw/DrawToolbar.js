@@ -40,11 +40,6 @@ L.DrawToolbar = L.Toolbar.extend({
 				title: L.drawLocal.draw.toolbar.buttons.polygon
 			},
 			{
-				enabled: this.options.rectangle,
-				handler: new L.Draw.Rectangle(map, this.options.rectangle),
-				title: L.drawLocal.draw.toolbar.buttons.rectangle
-			},
-			{
 				enabled: this.options.circle,
 				handler: new L.Draw.Circle(map, this.options.cicle),
 				title: L.drawLocal.draw.toolbar.buttons.circle
@@ -53,28 +48,14 @@ L.DrawToolbar = L.Toolbar.extend({
 	},
 
 	// Get the actions part of the toolbar
-	getActions: function (handler) {
-		return [
-			{
-				enabled: handler.deleteLastVertex,
-				title: L.drawLocal.draw.toolbar.undo.title,
-				text: L.drawLocal.draw.toolbar.undo.text,
-				callback: handler.deleteLastVertex,
-				context: handler
-			},
-			{
-				title: L.drawLocal.draw.toolbar.actions.title,
-				text: L.drawLocal.draw.toolbar.actions.text,
-				callback: this.cancel,
-				context: this
-			}
-		];
+	getActions: function () {
+		return [];
 	},
 	cancel: function () {
 		this._activeMode.handler.cancel();
 	},
-	save: function () {
-
+	_save: function () {
+		this._activeMode.handler.save();
 	},
 	setOptions: function (options) {
 		L.setOptions(this, options);

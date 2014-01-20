@@ -14,12 +14,9 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
 		if (this._map) {
-			this._map.dragging.disable();
 			//TODO refactor: move cursor to styles
 			this._container.style.cursor = 'crosshair';
-
-			this._tooltip.updateContent({ text: this._initialLabelText });
-
+			this.tooltip.innerHTML = this._initialLabelText;
 			this._map
 				.on('mousedown', this._onMouseDown, this)
 				.on('mousemove', this._onMouseMove, this);
@@ -29,7 +26,6 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 	removeHooks: function () {
 		L.Draw.Feature.prototype.removeHooks.call(this);
 		if (this._map) {
-			this._map.dragging.enable();
 			//TODO refactor: move cursor to styles
 			this._container.style.cursor = '';
 
@@ -49,6 +45,8 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 	},
 
 	_onMouseDown: function (e) {
+		if (!e.originalEvent.ctrlKey) {return; }
+		this._map.dragging.disable();
 		this._isDrawing = true;
 		this._startLatLng = e.latlng;
 
@@ -60,9 +58,8 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 	_onMouseMove: function (e) {
 		var latlng = e.latlng;
 
-		this._tooltip.updatePosition(latlng);
 		if (this._isDrawing) {
-			this._tooltip.updateContent({ text: this._endLabelText });
+			this.tooltip.innerHTML = this._endLabelText;
 			this._drawShape(latlng);
 		}
 	},
@@ -71,10 +68,21 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 		if (this._shape) {
 			this._fireCreatedEvent();
 		}
+		this._map.dragging.enable();
+		if (!this.options.repeatMode) {
+			this.disable();
+		} else {
+			if (this._map) {
+				L.DomEvent.off(document, 'mouseup', this._onMouseUp, this);
 
-		this.disable();
-		if (this.options.repeatMode) {
-			this.enable();
+				// If the box element doesn't exist they must not have moved the mouse, so don't need to destroy/return
+				if (this._shape) {
+					this._map.removeLayer(this._shape);
+					delete this._shape;
+				}
+			}
+			this.tooltip.innerHTML = this._initialLabelText;
+			this._isDrawing = false;
 		}
 	}
 });

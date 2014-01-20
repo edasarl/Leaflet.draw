@@ -35,6 +35,15 @@ L.Control.Draw = L.Control.extend({
 			// Listen for when toolbar is enabled
 			this._toolbars[id].on('enable', this._toolbarEnabled, this);
 		}
+
+		if (L.ViewToolbar && this.options.draw) {
+			toolbar = new L.ViewToolbar(this.options.draw);
+			id = L.stamp(toolbar);
+			this._toolbars[id] = toolbar;
+
+			// Listen for when toolbar is enabled
+			this._toolbars[id].on('enable', this._toolbarEnabled, this);
+		}
 	},
 
 	onAdd: function (map) {

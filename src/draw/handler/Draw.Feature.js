@@ -39,7 +39,8 @@ L.Draw.Feature = L.Handler.extend({
 	_propagateEvent: function (e) {
 		this._map.fire('click', e);
 	},
-	_backupLayer: function (layer) {
+	_backupLayer: function (e) {
+		var layer = e.layer || e.target || e;
 		var id = L.Util.stamp(layer);
 
 		if (!this._uneditedLayerProps[id]) {
@@ -48,6 +49,13 @@ L.Draw.Feature = L.Handler.extend({
 				this._uneditedLayerProps[id] = {
 					latlngs: L.LatLngUtil.cloneLatLngs(layer.getLatLngs())
 				};
+				if (layer._icon) {
+					this._uneditedLayerProps[id].icon = layer._icon.options.icon;
+					this._uneditedLayerProps[id].iconLatLng = L.LatLngUtil.cloneLatLng(layer._icon.getLatLng());
+					this._uneditedLayerProps[id].icon.width = layer._icon.width;
+					this._uneditedLayerProps[id].icon.height = layer._icon.height;
+					this._uneditedLayerProps[id].icon.fullscreen = layer._icon.fullscreen;
+				}
 			} else if (layer instanceof L.Circle) {
 				this._uneditedLayerProps[id] = {
 					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng()),
@@ -67,6 +75,13 @@ L.Draw.Feature = L.Handler.extend({
 			// Polyline, Polygon or Rectangle
 			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
 				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
+				if (layer._icon) {
+					layer._icon.setIcon(this._uneditedLayerProps[id].icon);
+					layer._icon.setLatLng(this._uneditedLayerProps[id].iconLatLng);
+					layer._icon.width = this._uneditedLayerProps[id].icon.width;
+					layer._icon.height = this._uneditedLayerProps[id].icon.height;
+					layer._icon.fullscreen = this._uneditedLayerProps[id].icon.fullscreen;
+				}
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
 				layer.setRadius(this._uneditedLayerProps[id].radius);
@@ -83,18 +98,24 @@ L.Draw.Feature = L.Handler.extend({
 
 			map.getContainer().focus();
 
-			this._tooltip = new L.Tooltip(this._map);
+			// this._tooltip = new L.Tooltip(this._map);
 
 			L.DomEvent.on(this._container, 'keyup', this._cancelDrawing, this);
+			this._map.on('save', this.save, this);
+			this._map.on('cancel', this.cancel, this);
+			this._map.on('cancelOne', this.deleteLastVertex, this);
 		}
 	},
 
 	removeHooks: function () {
 		if (this._map) {
+			this._map.off('save', this.save, this);
+			this._map.off('cancel', this.cancel, this);
+			this._map.off('cancelOne', this.deleteLastVertex, this);
 			L.DomUtil.enableTextSelection();
 
-			this._tooltip.dispose();
-			this._tooltip = null;
+			// this._tooltip.dispose();
+			// this._tooltip = null;
 
 			L.DomEvent.off(this._container, 'keyup', this._cancelDrawing, this);
 			// Clear the backups of the original layers

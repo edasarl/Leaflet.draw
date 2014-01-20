@@ -72,23 +72,8 @@ L.EditToolbar = L.Toolbar.extend({
 		];
 	},
 
-	getActions: function (handler) {
-		return [
-			{
-				enabled: handler.type !== 'navigate',
-				title: L.drawLocal.edit.toolbar.actions.save.title,
-				text: L.drawLocal.edit.toolbar.actions.save.text,
-				callback: this._save,
-				context: this
-			},
-			{
-				enabled: handler.type !== 'navigate',
-				title: L.drawLocal.edit.toolbar.actions.cancel.title,
-				text: L.drawLocal.edit.toolbar.actions.cancel.text,
-				callback: this.cancel,
-				context: this
-			}
-		];
+	getActions: function () {
+		return [];
 	},
 
 	addToolbar: function (map) {
