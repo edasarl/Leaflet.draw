@@ -36,9 +36,6 @@ L.Draw.Feature = L.Handler.extend({
 
 		this.fire('disabled', { handler: this.type });
 	},
-	_propagateEvent: function (e) {
-		this._map.fire('click', e);
-	},
 	_backupLayer: function (e) {
 		var layer = e.layer || e.target || e;
 		var id = L.Util.stamp(layer);

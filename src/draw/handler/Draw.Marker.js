@@ -58,7 +58,6 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			this.drawLayer.addTo(this._map);
 			this.globalDrawLayer.eachLayer(this._enableDrag, this);
 			this.globalDrawLayer.on('layeradd', this._enableDrag, this);
-			this.globalDrawLayer.on('click', this._propagateEvent, this);
 		}
 	},
 
@@ -66,7 +65,6 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		L.Draw.Feature.prototype.removeHooks.call(this);
 
 		if (this._map) {
-			this.globalDrawLayer.off('click', this._propagateEvent, this);
 			this.globalDrawLayer.eachLayer(this._disableDrag, this);
 			this.globalDrawLayer.off('layeradd', this._enableDrag, this);
 
