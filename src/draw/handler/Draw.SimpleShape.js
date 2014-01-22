@@ -45,7 +45,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 	},
 
 	_onMouseDown: function (e) {
-		if (!e.originalEvent.ctrlKey) {return; }
+		if (!e.originalEvent.shiftKey) {return; }
 		this._map.dragging.disable();
 		this._isDrawing = true;
 		this._startLatLng = e.latlng;
