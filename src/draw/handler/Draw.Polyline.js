@@ -438,6 +438,15 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var editedLayers = new L.LayerGroup();
 
 		this.globalDrawLayer.eachLayer(function (layer) {
+			var edited = false;
+			if (layer instanceof L.FeatureGroup) {
+				layer.eachLayer(function (geo) {
+					if (geo.edited) {
+						edited = true;
+					}
+				});
+				layer.edited = edited;
+			}
 			if (layer.edited) {
 				if (layer.saveId) {
 					editedLayers.addLayer(layer);
@@ -469,6 +478,11 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
 				this._revertLayer(layer);
 				layer.editing.updateMarkers();
+			} else if (layer instanceof L.MultiPolyline) {
+				this._revertLayer(layer);
+				layer.eachLayer(function (geo) {
+					geo.editing.updateMarkers();
+				});
 			}
 		}, this);
 	}

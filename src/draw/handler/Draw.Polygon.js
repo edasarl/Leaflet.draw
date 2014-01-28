@@ -103,6 +103,11 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 			if (layer instanceof L.Polygon) {
 				this._revertLayer(layer);
 				layer.editing.updateMarkers();
+			} else if (layer instanceof L.MultiPolygon) {
+				this._revertLayer(layer);
+				layer.eachLayer(function (geo) {
+					geo.editing.updateMarkers();
+				});
 			}
 		}, this);
 	}

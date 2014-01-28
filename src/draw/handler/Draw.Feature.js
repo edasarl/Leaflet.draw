@@ -39,6 +39,9 @@ L.Draw.Feature = L.Handler.extend({
 	_backupLayer: function (e) {
 		var layer = e.layer || e.target || e;
 		var id = L.Util.stamp(layer);
+		if (layer instanceof L.FeatureGroup) {
+			return layer.eachLayer(this._backupLayer, this);
+		}
 
 		if (!this._uneditedLayerProps[id]) {
 			// Polyline, Polygon or Rectangle
@@ -58,7 +61,7 @@ L.Draw.Feature = L.Handler.extend({
 					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng()),
 					radius: layer.getRadius()
 				};
-			} else { // Marker
+			} else if (layer instanceof L.Marker) {
 				this._uneditedLayerProps[id] = {
 					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng())
 				};
@@ -67,6 +70,9 @@ L.Draw.Feature = L.Handler.extend({
 	},
 	_revertLayer: function (layer) {
 		var id = L.Util.stamp(layer);
+		if (layer instanceof L.FeatureGroup) {
+			return layer.eachLayer(this._revertLayer, this);
+		}
 		layer.edited = false;
 		if (this._uneditedLayerProps.hasOwnProperty(id)) {
 			// Polyline, Polygon or Rectangle
@@ -82,7 +88,7 @@ L.Draw.Feature = L.Handler.extend({
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
 				layer.setRadius(this._uneditedLayerProps[id].radius);
-			} else { // Marker
+			} else if (layer instanceof L.Marker) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
 			}
 		}
