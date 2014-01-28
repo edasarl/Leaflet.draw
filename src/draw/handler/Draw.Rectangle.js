@@ -1,3 +1,5 @@
+L.ViewMarker = L.Marker.extend({});
+
 L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	statics: {
 		TYPE: 'rectangle'
@@ -128,7 +130,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
 
 		if (!this._coordsMarker) {
-			this._coordsMarker = new L.Marker(iconLatLng, {icon: myIcon});
+			this._coordsMarker = new L.ViewMarker(iconLatLng, {icon: myIcon});
 			this._coordsMarker.setZIndexOffset(100002);
 			this._map.addLayer(this._coordsMarker);
 			this._coordsMarker.zoom = zoom;
