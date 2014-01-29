@@ -1122,7 +1122,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this._coordsMarker._title = '';
 		this._coordsMarker._interface = 'leaflet';
 		var myIcon =  L.divIcon({
-			className: 'view-button view-delete'
+			className: 'view-button view-preference'
 		});
 		this._coordsMarker.setIcon(myIcon);
 		this._map.removeLayer(this._coordsMarker);
@@ -1737,9 +1737,35 @@ L.Edit.SimpleShape = L.Handler.extend({
 L.Edit = L.Edit || {};
 
 L.Edit.Rectangle = L.Edit.SimpleShape.extend({
+	_zoomToResize: function (e) {
+		var marker = e.target,
+			latlng = marker.getLatLng();
+		var zoom = this._shape._zoom;
+		var map = this._map;
+		setTimeout(function () {
+			map.setZoomAround(latlng, zoom);
+		}, 0);
+	},
+
+	addHooks: function () {
+		L.Edit.SimpleShape.prototype.addHooks.call(this);
+		for (var i = 0, l = this._resizeMarkers.length; i < l; i++) {
+			var bindmarker = this._resizeMarkers[i];
+			bindmarker.on('mousedown', this._zoomToResize, this);
+		}
+
+	},
+	removeHooks: function () {
+		for (var i = 0, l = this._resizeMarkers.length; i < l; i++) {
+			var bindmarker = this._resizeMarkers[i];
+			bindmarker.off('mousedown', this._zoomToResize, this);
+		}
+		L.Edit.SimpleShape.prototype.removeHooks.call(this);
+	},
+	//patch for rectangles moving size when translated
 	_createMoveMarker: function () {
 		var bounds = this._shape.getBounds(),
-			center = bounds.getCenter();
+			center = this._map.getRealCenter(bounds);
 
 		this._moveMarker = this._createMarker(center, this.options.moveIcon);
 	},
@@ -1757,6 +1783,7 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 	},
 
 	_onMarkerDragStart: function (e) {
+		// this._map.addLayer(this._shape._icon);
 		L.Edit.SimpleShape.prototype._onMarkerDragStart.call(this, e);
 
 		// Save a reference to the opposite point
@@ -1776,7 +1803,7 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 		// Reset move marker position to the center
 		if (marker === this._moveMarker) {
 			bounds = this._shape.getBounds();
-			center = bounds.getCenter();
+			center = this._map.getRealCenter(bounds);
 
 			marker.setLatLng(center);
 		}
@@ -1786,35 +1813,69 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 		this._repositionCornerMarkers();
 
 		L.Edit.SimpleShape.prototype._onMarkerDragEnd.call(this, e);
+		var myIcon =  L.divIcon({
+			className: 'view-button view-preference',
+		});
+		this._shape._icon.setIcon(myIcon);
+		// this._map.removeLayer(this._shape._icon);
 	},
 
 	_move: function (newCenter) {
 		var latlngs = this._shape.getLatLngs(),
 			bounds = this._shape.getBounds(),
-			center = bounds.getCenter(),
+			// center = this._map.getRealCenter(bounds),
 			offset, newLatLngs = [];
+
+		var northEast = this._map.project(bounds._northEast),
+			southWest = this._map.project(bounds._southWest),
+			projectedCenter = new L.Point((northEast.x + southWest.x) / 2, (northEast.y + southWest.y) / 2),
+			projectedNewCenter = this._map.project(newCenter);
 
 		// Offset the latlngs to the new center
 		for (var i = 0, l = latlngs.length; i < l; i++) {
-			offset = [latlngs[i].lat - center.lat, latlngs[i].lng - center.lng];
-			newLatLngs.push([newCenter.lat + offset[0], newCenter.lng + offset[1]]);
+			var current = this._map.project(latlngs[i]);
+			offset = [current.x - projectedCenter.x, current.y - projectedCenter.y];
+			newLatLngs.push(this._map.unproject([projectedNewCenter.x + offset[0], projectedNewCenter.y + offset[1]]));
 		}
 
 		this._shape.setLatLngs(newLatLngs);
+		bounds = this._shape.getBounds();
+		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
+		this._shape._icon.setLatLng(iconLatLng);
 
-		// Reposition the resize markers
+		// Respoition the resize markers
 		this._repositionCornerMarkers();
 	},
 
 	_resize: function (latlng) {
-		var bounds;
+		var roundedBounds = this._map._roundLatlng(this._moveMarker.getLatLng(), latlng, 5, 20);
+		this._shape.setBounds(L.latLngBounds(roundedBounds[0], roundedBounds[1]));
 
-		// Update the shape based on the current position of this corner and the opposite point
-		this._shape.setBounds(L.latLngBounds(latlng, this._oppositeCorner));
+		var zoom = this._shape._zoom;
+		var bounds = this._shape.getBounds();
+		var northEast = this._map.project(bounds._northEast, zoom),
+			southWest = this._map.project(bounds._southWest, zoom),
+			width =  Math.round(northEast.x - southWest.x),
+			height = Math.round(southWest.y - northEast.y);
 
-		// Reposition the move marker
+		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
+		this._shape._icon.setLatLng(iconLatLng);
+		var fullScreen = (width === 40 && height === 40);
+		var htmlContent = fullScreen ? 'Plein écran': width + 'x' + height;
+		var myIcon = L.divIcon({
+			html: htmlContent + ' z=' + zoom,
+			// iconSize: L.Point(40,40),
+			iconAnchor: [110, -10],
+			className: 'coords-icon'
+		});
+		this._shape._icon.setIcon(myIcon);
+		this._shape._icon.width = width;
+		this._shape._icon.height = height;
+		this._shape._icon.fullscreen = fullScreen;
+
+		// Respoition the move marker
 		bounds = this._shape.getBounds();
-		this._moveMarker.setLatLng(bounds.getCenter());
+		this._moveMarker.setLatLng(this._map.getRealCenter(bounds));
 	},
 
 	_getCorners: function () {
@@ -2692,6 +2753,10 @@ L.EditToolbar = L.Toolbar.extend({
 			options.remove = L.extend({}, this.options.remove, options.remove);
 		}
 
+		if (options.style) {
+			options.style = L.extend({}, this.options.style, options.style);
+		}
+
 		this._toolbarClass = 'leaflet-draw-edit';
 		L.Toolbar.prototype.initialize.call(this, options);
 
@@ -2772,8 +2837,8 @@ L.EditToolbar = L.Toolbar.extend({
 	},
 
 	_checkDisabled: function () {
-		var featureGroup = this.options.featureGroup,
-			hasLayers = featureGroup.getLayers().length !== 0,
+		// var featureGroup = this.options.featureGroup;
+		var hasLayers = true,//featureGroup.getLayers().length !== 0,
 			button;
 
 		if (this.options.edit) {
@@ -2807,6 +2872,22 @@ L.EditToolbar = L.Toolbar.extend({
 				hasLayers ?
 				L.drawLocal.edit.toolbar.buttons.remove
 				: L.drawLocal.edit.toolbar.buttons.removeDisabled
+			);
+		}
+		if (this.options.style) {
+			button = this._modes[L.EditToolbar.Style.TYPE].button;
+
+			if (hasLayers) {
+				L.DomUtil.removeClass(button, 'leaflet-disabled');
+			} else {
+				L.DomUtil.addClass(button, 'leaflet-disabled');
+			}
+
+			button.setAttribute(
+				'title',
+				hasLayers ?
+				L.drawLocal.edit.toolbar.buttons.style
+				: L.drawLocal.edit.toolbar.buttons.styleDisabled
 			);
 		}
 	}
@@ -2924,6 +3005,13 @@ L.EditToolbar.Edit = L.Handler.extend({
 				this._uneditedLayerProps[id] = {
 					latlngs: L.LatLngUtil.cloneLatLngs(layer.getLatLngs())
 				};
+				if (layer._icon) {
+					this._uneditedLayerProps[id].icon = layer._icon.options.icon;
+					this._uneditedLayerProps[id].iconLatLng = L.LatLngUtil.cloneLatLng(layer._icon.getLatLng());
+					this._uneditedLayerProps[id].icon.width = layer._icon.width;
+					this._uneditedLayerProps[id].icon.height = layer._icon.height;
+
+				}
 			} else if (layer instanceof L.Circle) {
 				this._uneditedLayerProps[id] = {
 					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng()),
@@ -2944,6 +3032,12 @@ L.EditToolbar.Edit = L.Handler.extend({
 			// Polyline, Polygon or Rectangle
 			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
 				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
+				if (layer._icon) {
+					layer._icon.setIcon(this._uneditedLayerProps[id].icon);
+					layer._icon.setLatLng(this._uneditedLayerProps[id].iconLatLng);
+					layer._icon.width = this._uneditedLayerProps[id].icon.width;
+					layer._icon.height = this._uneditedLayerProps[id].icon.height;
+				}
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
 				layer.setRadius(this._uneditedLayerProps[id].radius);
@@ -3059,7 +3153,8 @@ L.EditToolbar.Edit = L.Handler.extend({
 	},
 
 	_hasAvailableLayers: function () {
-		return this._featureGroup.getLayers().length !== 0;
+		// return this._featureGroup.getLayers().length !== 0;
+		return true;
 	}
 });
 
@@ -3144,6 +3239,9 @@ L.EditToolbar.Delete = L.Handler.extend({
 	revertLayers: function () {
 		// Iterate of the deleted layers and add them back into the featureGroup
 		this._deletedLayers.eachLayer(function (layer) {
+			if (layer._rectangle) {
+				this._deletableLayers.addLayer(layer._rectangle);
+			}
 			this._deletableLayers.addLayer(layer);
 		}, this);
 	},
@@ -3168,10 +3266,12 @@ L.EditToolbar.Delete = L.Handler.extend({
 	},
 
 	_removeLayer: function (e) {
-		var layer = e.layer || e.target || e;
-
+		// var layer = e.layer || e.target || e;
+		var layer = e.target || e;
+		if (layer._rectangle) {
+			this._deletableLayers.removeLayer(layer._rectangle);
+		}
 		this._deletableLayers.removeLayer(layer);
-
 		this._deletedLayers.addLayer(layer);
 	},
 
@@ -3180,7 +3280,8 @@ L.EditToolbar.Delete = L.Handler.extend({
 	},
 
 	_hasAvailableLayers: function () {
-		return this._deletableLayers.getLayers().length !== 0;
+		// return this._deletableLayers.getLayers().length !== 0;
+		return true;
 	}
 });
 
