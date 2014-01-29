@@ -169,7 +169,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this._coordsMarker._title = '';
 		this._coordsMarker._interface = 'leaflet';
 		var myIcon =  L.divIcon({
-			className: 'view-button view-delete'
+			className: 'view-button view-preference'
 		});
 		this._coordsMarker.setIcon(myIcon);
 		this._map.removeLayer(this._coordsMarker);
