@@ -18,7 +18,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 			this._container.style.cursor = 'crosshair';
 			this.tooltip.innerHTML = this._initialLabelText;
 			this._map
-				.on('mousedown', this._onMouseDown, this)
+				.on('click', this._onMouseDown, this)
 				.on('mousemove', this._onMouseMove, this);
 		}
 	},
@@ -30,10 +30,8 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 			this._container.style.cursor = '';
 
 			this._map
-				.off('mousedown', this._onMouseDown, this)
+				.off('click', this._onMouseDown, this)
 				.off('mousemove', this._onMouseMove, this);
-
-			L.DomEvent.off(document, 'mouseup', this._onMouseUp, this);
 
 			// If the box element doesn't exist they must not have moved the mouse, so don't need to destroy/return
 			if (this._shape) {
@@ -45,44 +43,39 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 	},
 
 	_onMouseDown: function (e) {
-		if (!e.originalEvent.shiftKey) {return; }
-		this._map.dragging.disable();
-		this._isDrawing = true;
-		this._startLatLng = e.latlng;
+		if (this._isDrawing) {
+			if (this._shape) {
+				this._fireCreatedEvent();
+			}
+			this._map.dragging.enable();
+			if (!this.options.repeatMode) {
+				this.disable();
+			} else {
+				if (this._map) {
 
-		L.DomEvent
-			.on(document, 'mouseup', this._onMouseUp, this)
-			.preventDefault(e.originalEvent);
+					// If the box element doesn't exist they must not have moved the mouse, so don't need to destroy/return
+					if (this._shape) {
+						this._map.removeLayer(this._shape);
+						delete this._shape;
+					}
+				}
+				this.tooltip.innerHTML = this._initialLabelText;
+				this._isDrawing = false;
+			}
+			return;
+		} else {
+			this._isDrawing = true;
+			this._startLatLng = e.latlng;
+			L.DomEvent.preventDefault(e.originalEvent);
+			this.tooltip.innerHTML = this._endLabelText;
+		}
 	},
 
 	_onMouseMove: function (e) {
 		var latlng = e.latlng;
 
 		if (this._isDrawing) {
-			this.tooltip.innerHTML = this._endLabelText;
 			this._drawShape(latlng);
-		}
-	},
-
-	_onMouseUp: function () {
-		if (this._shape) {
-			this._fireCreatedEvent();
-		}
-		this._map.dragging.enable();
-		if (!this.options.repeatMode) {
-			this.disable();
-		} else {
-			if (this._map) {
-				L.DomEvent.off(document, 'mouseup', this._onMouseUp, this);
-
-				// If the box element doesn't exist they must not have moved the mouse, so don't need to destroy/return
-				if (this._shape) {
-					this._map.removeLayer(this._shape);
-					delete this._shape;
-				}
-			}
-			this.tooltip.innerHTML = this._initialLabelText;
-			this._isDrawing = false;
 		}
 	}
 });
