@@ -85,6 +85,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	save: function () {
 		var self = this;
+		this._deletedLayers.eachLayer(function (viewMarker) {
+			if (self.newViews.hasLayer(viewMarker._rectangle)) {
+				self.newViews.removeLayer(viewMarker._rectangle);
+				self._deletedLayers.removeLayer(viewMarker);
+			}
+		});
 
 		this.newViews.eachLayer(function (rectangle) {
 			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, rectangle);
