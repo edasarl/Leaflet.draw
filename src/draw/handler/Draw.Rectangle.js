@@ -55,6 +55,10 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	removeHooks: function () {
 		L.Draw.SimpleShape.prototype.removeHooks.call(this);
 		if (this._map) {
+			if (this._coordsMarker) {
+				this._map.removeLayer(this._coordsMarker);
+				this._coordsMarker = null;
+			}
 			this.viewLayer.off('click', this._remove, this);
 			this.rectangleLayer.off('layeradd', this._backupLayer, this);
 			this.save();
