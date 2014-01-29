@@ -109,6 +109,13 @@ L.EditToolbar.Edit = L.Handler.extend({
 				this._uneditedLayerProps[id] = {
 					latlngs: L.LatLngUtil.cloneLatLngs(layer.getLatLngs())
 				};
+				if (layer._icon) {
+					this._uneditedLayerProps[id].icon = layer._icon.options.icon;
+					this._uneditedLayerProps[id].iconLatLng = L.LatLngUtil.cloneLatLng(layer._icon.getLatLng());
+					this._uneditedLayerProps[id].icon.width = layer._icon.width;
+					this._uneditedLayerProps[id].icon.height = layer._icon.height;
+
+				}
 			} else if (layer instanceof L.Circle) {
 				this._uneditedLayerProps[id] = {
 					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng()),
@@ -129,6 +136,12 @@ L.EditToolbar.Edit = L.Handler.extend({
 			// Polyline, Polygon or Rectangle
 			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
 				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
+				if (layer._icon) {
+					layer._icon.setIcon(this._uneditedLayerProps[id].icon);
+					layer._icon.setLatLng(this._uneditedLayerProps[id].iconLatLng);
+					layer._icon.width = this._uneditedLayerProps[id].icon.width;
+					layer._icon.height = this._uneditedLayerProps[id].icon.height;
+				}
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
 				layer.setRadius(this._uneditedLayerProps[id].radius);
@@ -244,6 +257,7 @@ L.EditToolbar.Edit = L.Handler.extend({
 	},
 
 	_hasAvailableLayers: function () {
-		return this._featureGroup.getLayers().length !== 0;
+		// return this._featureGroup.getLayers().length !== 0;
+		return true;
 	}
 });

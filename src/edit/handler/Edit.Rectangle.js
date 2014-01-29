@@ -1,9 +1,35 @@
 L.Edit = L.Edit || {};
 
 L.Edit.Rectangle = L.Edit.SimpleShape.extend({
+	_zoomToResize: function (e) {
+		var marker = e.target,
+			latlng = marker.getLatLng();
+		var zoom = this._shape._zoom;
+		var map = this._map;
+		setTimeout(function () {
+			map.setZoomAround(latlng, zoom);
+		}, 0);
+	},
+
+	addHooks: function () {
+		L.Edit.SimpleShape.prototype.addHooks.call(this);
+		for (var i = 0, l = this._resizeMarkers.length; i < l; i++) {
+			var bindmarker = this._resizeMarkers[i];
+			bindmarker.on('mousedown', this._zoomToResize, this);
+		}
+
+	},
+	removeHooks: function () {
+		for (var i = 0, l = this._resizeMarkers.length; i < l; i++) {
+			var bindmarker = this._resizeMarkers[i];
+			bindmarker.off('mousedown', this._zoomToResize, this);
+		}
+		L.Edit.SimpleShape.prototype.removeHooks.call(this);
+	},
+	//patch for rectangles moving size when translated
 	_createMoveMarker: function () {
 		var bounds = this._shape.getBounds(),
-			center = bounds.getCenter();
+			center = this._map.getRealCenter(bounds);
 
 		this._moveMarker = this._createMarker(center, this.options.moveIcon);
 	},
@@ -21,6 +47,7 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 	},
 
 	_onMarkerDragStart: function (e) {
+		// this._map.addLayer(this._shape._icon);
 		L.Edit.SimpleShape.prototype._onMarkerDragStart.call(this, e);
 
 		// Save a reference to the opposite point
@@ -40,7 +67,7 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 		// Reset move marker position to the center
 		if (marker === this._moveMarker) {
 			bounds = this._shape.getBounds();
-			center = bounds.getCenter();
+			center = this._map.getRealCenter(bounds);
 
 			marker.setLatLng(center);
 		}
@@ -50,35 +77,69 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 		this._repositionCornerMarkers();
 
 		L.Edit.SimpleShape.prototype._onMarkerDragEnd.call(this, e);
+		var myIcon =  L.divIcon({
+			className: 'view-button view-preference',
+		});
+		this._shape._icon.setIcon(myIcon);
+		// this._map.removeLayer(this._shape._icon);
 	},
 
 	_move: function (newCenter) {
 		var latlngs = this._shape.getLatLngs(),
 			bounds = this._shape.getBounds(),
-			center = bounds.getCenter(),
+			// center = this._map.getRealCenter(bounds),
 			offset, newLatLngs = [];
+
+		var northEast = this._map.project(bounds._northEast),
+			southWest = this._map.project(bounds._southWest),
+			projectedCenter = new L.Point((northEast.x + southWest.x) / 2, (northEast.y + southWest.y) / 2),
+			projectedNewCenter = this._map.project(newCenter);
 
 		// Offset the latlngs to the new center
 		for (var i = 0, l = latlngs.length; i < l; i++) {
-			offset = [latlngs[i].lat - center.lat, latlngs[i].lng - center.lng];
-			newLatLngs.push([newCenter.lat + offset[0], newCenter.lng + offset[1]]);
+			var current = this._map.project(latlngs[i]);
+			offset = [current.x - projectedCenter.x, current.y - projectedCenter.y];
+			newLatLngs.push(this._map.unproject([projectedNewCenter.x + offset[0], projectedNewCenter.y + offset[1]]));
 		}
 
 		this._shape.setLatLngs(newLatLngs);
+		bounds = this._shape.getBounds();
+		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
+		this._shape._icon.setLatLng(iconLatLng);
 
-		// Reposition the resize markers
+		// Respoition the resize markers
 		this._repositionCornerMarkers();
 	},
 
 	_resize: function (latlng) {
-		var bounds;
+		var roundedBounds = this._map._roundLatlng(this._moveMarker.getLatLng(), latlng, 5, 20);
+		this._shape.setBounds(L.latLngBounds(roundedBounds[0], roundedBounds[1]));
 
-		// Update the shape based on the current position of this corner and the opposite point
-		this._shape.setBounds(L.latLngBounds(latlng, this._oppositeCorner));
+		var zoom = this._shape._zoom;
+		var bounds = this._shape.getBounds();
+		var northEast = this._map.project(bounds._northEast, zoom),
+			southWest = this._map.project(bounds._southWest, zoom),
+			width =  Math.round(northEast.x - southWest.x),
+			height = Math.round(southWest.y - northEast.y);
 
-		// Reposition the move marker
+		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
+		this._shape._icon.setLatLng(iconLatLng);
+		var fullScreen = (width === 40 && height === 40);
+		var htmlContent = fullScreen ? 'Plein écran': width + 'x' + height;
+		var myIcon = L.divIcon({
+			html: htmlContent + ' z=' + zoom,
+			// iconSize: L.Point(40,40),
+			iconAnchor: [110, -10],
+			className: 'coords-icon'
+		});
+		this._shape._icon.setIcon(myIcon);
+		this._shape._icon.width = width;
+		this._shape._icon.height = height;
+		this._shape._icon.fullscreen = fullScreen;
+
+		// Respoition the move marker
 		bounds = this._shape.getBounds();
-		this._moveMarker.setLatLng(bounds.getCenter());
+		this._moveMarker.setLatLng(this._map.getRealCenter(bounds));
 	},
 
 	_getCorners: function () {

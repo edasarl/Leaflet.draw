@@ -32,6 +32,10 @@ L.EditToolbar = L.Toolbar.extend({
 			options.remove = L.extend({}, this.options.remove, options.remove);
 		}
 
+		if (options.style) {
+			options.style = L.extend({}, this.options.style, options.style);
+		}
+
 		this._toolbarClass = 'leaflet-draw-edit';
 		L.Toolbar.prototype.initialize.call(this, options);
 
@@ -112,8 +116,8 @@ L.EditToolbar = L.Toolbar.extend({
 	},
 
 	_checkDisabled: function () {
-		var featureGroup = this.options.featureGroup,
-			hasLayers = featureGroup.getLayers().length !== 0,
+		// var featureGroup = this.options.featureGroup;
+		var hasLayers = true,//featureGroup.getLayers().length !== 0,
 			button;
 
 		if (this.options.edit) {
@@ -147,6 +151,22 @@ L.EditToolbar = L.Toolbar.extend({
 				hasLayers ?
 				L.drawLocal.edit.toolbar.buttons.remove
 				: L.drawLocal.edit.toolbar.buttons.removeDisabled
+			);
+		}
+		if (this.options.style) {
+			button = this._modes[L.EditToolbar.Style.TYPE].button;
+
+			if (hasLayers) {
+				L.DomUtil.removeClass(button, 'leaflet-disabled');
+			} else {
+				L.DomUtil.addClass(button, 'leaflet-disabled');
+			}
+
+			button.setAttribute(
+				'title',
+				hasLayers ?
+				L.drawLocal.edit.toolbar.buttons.style
+				: L.drawLocal.edit.toolbar.buttons.styleDisabled
 			);
 		}
 	}
