@@ -78,7 +78,9 @@ L.EditToolbar.Delete = L.Handler.extend({
 	revertLayers: function () {
 		// Iterate of the deleted layers and add them back into the featureGroup
 		this._deletedLayers.eachLayer(function (layer) {
-			if (layer._rectangle) this._deletableLayers.addLayer(layer._rectangle);
+			if (layer._rectangle) {
+				this._deletableLayers.addLayer(layer._rectangle);
+			}
 			this._deletableLayers.addLayer(layer);
 		}, this);
 	},
@@ -105,8 +107,9 @@ L.EditToolbar.Delete = L.Handler.extend({
 	_removeLayer: function (e) {
 		// var layer = e.layer || e.target || e;
 		var layer = e.target || e;
-		if (layer instanceof L.FeatureGroup) console.log('featureGroup');
-		if (layer._rectangle) this._deletableLayers.removeLayer(layer._rectangle);
+		if (layer._rectangle) {
+			this._deletableLayers.removeLayer(layer._rectangle);
+		}
 		this._deletableLayers.removeLayer(layer);
 		this._deletedLayers.addLayer(layer);
 	},
