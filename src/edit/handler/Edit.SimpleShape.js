@@ -102,6 +102,7 @@ L.Edit.SimpleShape = L.Handler.extend({
 		marker.setOpacity(0);
 
 		this._shape.fire('editstart');
+		this._map.fire('editstart');
 	},
 
 	_fireEdit: function () {
@@ -118,7 +119,6 @@ L.Edit.SimpleShape = L.Handler.extend({
 		} else {
 			this._resize(latlng);
 		}
-
 		this._shape.redraw();
 	},
 
