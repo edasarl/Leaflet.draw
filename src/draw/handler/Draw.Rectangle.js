@@ -44,9 +44,10 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	addHooks: function () {
 		L.Draw.SimpleShape.prototype.addHooks.call(this);
 		if (this._map) {
-			this.viewLayer.on('click', this._remove, this);
+			this.viewLayer.on('click', this._onClick, this);
 			this.backup();
 			this.rectangleLayer.on('layeradd', this._backupLayer, this);
+			this._map.on('click editstart', this._blur, this);
 		}
 	},
 	backup: function () {
@@ -55,13 +56,39 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	removeHooks: function () {
 		L.Draw.SimpleShape.prototype.removeHooks.call(this);
 		if (this._map) {
+			this._map.off('click editstart', this._blur, this);
 			if (this._coordsMarker) {
 				this._map.removeLayer(this._coordsMarker);
 				this._coordsMarker = null;
 			}
-			this.viewLayer.off('click', this._remove, this);
+			this.focused = null;
+			this.viewLayer.off('click', this._onClick, this);
 			this.rectangleLayer.off('layeradd', this._backupLayer, this);
 			this.save();
+		}
+	},
+	_blur: function () {
+		if (!this.focused) {
+			return;
+		}
+		this.panel.blurView();
+		this.focused = null;
+		var self = this;
+		setTimeout(function () {
+			self._map.on('click', self._onMouseDown, self);
+		}, 0);
+	},
+	_onClick: function (e) {
+		var layer = e.layer;
+		if (this.focused === layer) {
+			return;
+		} else {
+			if (this.focused) {
+				this.panel.blurView();
+			}
+			this.focused = layer;
+			this.panel.focusView(layer);
+			this._map.off('click', this._onMouseDown, this);
 		}
 	},
 	_remove: function (e) {
@@ -69,6 +96,20 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this.viewLayer.removeLayer(layer);
 		this.rectangleLayer.removeLayer(layer._rectangle);
 		this._deletedLayers.addLayer(layer);
+	},
+	deleteLastVertex: function () {
+		if (this._isDrawing) {
+			if (this._map  && this._shape) {
+				this._map.removeLayer(this._shape);
+				delete this._shape;
+				if (this._coordsMarker) {
+					this._map.removeLayer(this._coordsMarker);
+					this._coordsMarker = null;
+				}
+			}
+			this.panel.updateToolTip(this._initialLabelText);
+			this._isDrawing = false;
+		}
 	},
 	cancel: function () {
 		var self = this;
