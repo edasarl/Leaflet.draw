@@ -295,7 +295,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.globalDrawLayer = featureGroup;
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
-		this.tooltip = options.tooltip;
+		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
 		this._map.on('polyDragStart', function () {
@@ -322,7 +322,8 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			this._map.addLayer(this._markerGroup);
 
 			this._poly = new L.Polyline([], this.options.shapeOptions);
-			this.tooltip.innerHTML = this._getTooltipText().text;
+			this.panel.updateToolTip(this._getTooltipText().text);
+			this.panel.show(true);
 			this._map._container.style.cursor = 'crosshair';
 			this._map.on('click', this._onClick, this);
 			this._map
@@ -367,6 +368,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.save();
 		this.globalDrawLayer
 			.off('layeradd', this._enableLayerEdit, this);
+		this.panel.hide();
 	},
 	deleteLastVertex: function () {
 		if (this._markers.length === 0) {
@@ -437,7 +439,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			this._markers = [];
 
 			this._poly = new L.Polyline([], this.options.shapeOptions);
-			this.tooltip.innerHTML = this._getTooltipText().text;
+			this.panel.updateToolTip(this._getTooltipText().text);
 		}
 	},
 
@@ -533,7 +535,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		// }
 
 		if (!this._errorShown) {
-			this.tooltip.innerHTML = text;
+			this.panel.updateToolTip(text);
 		}
 	},
 
@@ -641,7 +643,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._errorShown = true;
 
 		// Update tooltip
-		this.tooltip.innerHTML = this.options.drawError.message;
+		this.panel.updateToolTip(this.options.drawError.message);
 
 		// Update shape
 		this._updateGuideColor(this.options.drawError.color);
@@ -658,7 +660,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._clearHideErrorTimeout();
 
 		// Revert tooltip
-		this.tooltip.innerHTML = this._getTooltipText().text;
+		this.panel.updateToolTip(this._getTooltipText().text);
 
 		// Revert shape
 		this._updateGuideColor(this.options.shapeOptions.color);
@@ -887,7 +889,8 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 		if (this._map) {
 			//TODO refactor: move cursor to styles
 			this._container.style.cursor = 'crosshair';
-			this.tooltip.innerHTML = this._initialLabelText;
+			this.panel.show(true);
+			this.panel.updateToolTip(this._initialLabelText);
 			this._map
 				.on('click', this._onMouseDown, this)
 				.on('mousemove', this._onMouseMove, this);
@@ -899,6 +902,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 		if (this._map) {
 			//TODO refactor: move cursor to styles
 			this._container.style.cursor = '';
+			this.panel.hide();
 
 			this._map
 				.off('click', this._onMouseDown, this)
@@ -912,13 +916,11 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 		}
 		this._isDrawing = false;
 	},
-
 	_onMouseDown: function (e) {
 		if (this._isDrawing) {
 			if (this._shape) {
 				this._fireCreatedEvent();
 			}
-			this._map.dragging.enable();
 			if (!this.options.repeatMode) {
 				this.disable();
 			} else {
@@ -930,7 +932,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 						delete this._shape;
 					}
 				}
-				this.tooltip.innerHTML = this._initialLabelText;
+				this.panel.updateToolTip(this._initialLabelText);
 				this._isDrawing = false;
 			}
 			return;
@@ -938,7 +940,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 			this._isDrawing = true;
 			this._startLatLng = e.latlng;
 			L.DomEvent.preventDefault(e.originalEvent);
-			this.tooltip.innerHTML = this._endLabelText;
+			this.panel.updateToolTip(this._endLabelText);
 		}
 	},
 
@@ -980,7 +982,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this.rectangleLayer = rectangleLayer;
 		this._deletedLayers = L.layerGroup();
 		this.newViews = L.layerGroup();
-		this.tooltip = options.tooltip;
+		this.panel = options.panel;
 
 		L.Draw.SimpleShape.prototype.initialize.call(this, map, options);
 		var self = this;
@@ -997,9 +999,10 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	addHooks: function () {
 		L.Draw.SimpleShape.prototype.addHooks.call(this);
 		if (this._map) {
-			this.viewLayer.on('click', this._remove, this);
+			this.viewLayer.on('click', this._onClick, this);
 			this.backup();
 			this.rectangleLayer.on('layeradd', this._backupLayer, this);
+			this._map.on('click editstart', this._blur, this);
 		}
 	},
 	backup: function () {
@@ -1008,13 +1011,39 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	removeHooks: function () {
 		L.Draw.SimpleShape.prototype.removeHooks.call(this);
 		if (this._map) {
+			this._map.off('click editstart', this._blur, this);
 			if (this._coordsMarker) {
 				this._map.removeLayer(this._coordsMarker);
 				this._coordsMarker = null;
 			}
-			this.viewLayer.off('click', this._remove, this);
+			this.focused = null;
+			this.viewLayer.off('click', this._onClick, this);
 			this.rectangleLayer.off('layeradd', this._backupLayer, this);
 			this.save();
+		}
+	},
+	_blur: function () {
+		if (!this.focused) {
+			return;
+		}
+		this.panel.blurView();
+		this.focused = null;
+		var self = this;
+		setTimeout(function () {
+			self._map.on('click', self._onMouseDown, self);
+		}, 0);
+	},
+	_onClick: function (e) {
+		var layer = e.layer;
+		if (this.focused === layer) {
+			return;
+		} else {
+			if (this.focused) {
+				this.panel.blurView();
+			}
+			this.focused = layer;
+			this.panel.focusView(layer);
+			this._map.off('click', this._onMouseDown, this);
 		}
 	},
 	_remove: function (e) {
@@ -1022,6 +1051,20 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this.viewLayer.removeLayer(layer);
 		this.rectangleLayer.removeLayer(layer._rectangle);
 		this._deletedLayers.addLayer(layer);
+	},
+	deleteLastVertex: function () {
+		if (this._isDrawing) {
+			if (this._map  && this._shape) {
+				this._map.removeLayer(this._shape);
+				delete this._shape;
+				if (this._coordsMarker) {
+					this._map.removeLayer(this._coordsMarker);
+					this._coordsMarker = null;
+				}
+			}
+			this.panel.updateToolTip(this._initialLabelText);
+			this._isDrawing = false;
+		}
 	},
 	cancel: function () {
 		var self = this;
@@ -1217,7 +1260,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.globalDrawLayer = featureGroup;
-		this.tooltip = options.tooltip;
+		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
 	_enableDrag: function (e) {
@@ -1251,7 +1294,8 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
 		if (this._map) {
-			this.tooltip.innerHTML = L.drawLocal.draw.handlers.marker.tooltip.start;
+			this.panel.show();
+			this.panel.updateToolTip(L.drawLocal.draw.handlers.marker.tooltip.start);
 			this._map._container.style.cursor = 'crosshair';
 			this._map.on('mousemove', this._onMouseMove, this);
 			this._map.on('click', this._onClick, this);
@@ -1266,6 +1310,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		L.Draw.Feature.prototype.removeHooks.call(this);
 
 		if (this._map) {
+			this.panel.hide();
 			this.globalDrawLayer.eachLayer(this._disableDrag, this);
 			this.globalDrawLayer.off('layeradd', this._enableDrag, this);
 
@@ -1697,6 +1742,7 @@ L.Edit.SimpleShape = L.Handler.extend({
 		marker.setOpacity(0);
 
 		this._shape.fire('editstart');
+		this._map.fire('editstart');
 	},
 
 	_fireEdit: function () {
@@ -1713,7 +1759,6 @@ L.Edit.SimpleShape = L.Handler.extend({
 		} else {
 			this._resize(latlng);
 		}
-
 		this._shape.redraw();
 	},
 
