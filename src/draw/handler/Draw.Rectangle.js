@@ -27,7 +27,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this.rectangleLayer = rectangleLayer;
 		this._deletedLayers = L.layerGroup();
 		this.newViews = L.layerGroup();
-		this.tooltip = options.tooltip;
+		this.panel = options.panel;
 
 		L.Draw.SimpleShape.prototype.initialize.call(this, map, options);
 		var self = this;

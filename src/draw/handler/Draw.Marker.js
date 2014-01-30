@@ -16,7 +16,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.globalDrawLayer = featureGroup;
-		this.tooltip = options.tooltip;
+		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
 	_enableDrag: function (e) {
@@ -50,7 +50,8 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
 		if (this._map) {
-			this.tooltip.innerHTML = L.drawLocal.draw.handlers.marker.tooltip.start;
+			this.panel.show();
+			this.panel.updateToolTip(L.drawLocal.draw.handlers.marker.tooltip.start);
 			this._map._container.style.cursor = 'crosshair';
 			this._map.on('mousemove', this._onMouseMove, this);
 			this._map.on('click', this._onClick, this);
@@ -65,6 +66,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		L.Draw.Feature.prototype.removeHooks.call(this);
 
 		if (this._map) {
+			this.panel.hide();
 			this.globalDrawLayer.eachLayer(this._disableDrag, this);
 			this.globalDrawLayer.off('layeradd', this._enableDrag, this);
 

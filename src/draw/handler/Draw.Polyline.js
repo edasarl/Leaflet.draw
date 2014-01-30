@@ -44,7 +44,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.globalDrawLayer = featureGroup;
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
-		this.tooltip = options.tooltip;
+		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
 		this._map.on('polyDragStart', function () {
@@ -71,7 +71,8 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			this._map.addLayer(this._markerGroup);
 
 			this._poly = new L.Polyline([], this.options.shapeOptions);
-			this.tooltip.innerHTML = this._getTooltipText().text;
+			this.panel.updateToolTip(this._getTooltipText().text);
+			this.panel.show(true);
 			this._map._container.style.cursor = 'crosshair';
 			this._map.on('click', this._onClick, this);
 			this._map
@@ -116,6 +117,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.save();
 		this.globalDrawLayer
 			.off('layeradd', this._enableLayerEdit, this);
+		this.panel.hide();
 	},
 	deleteLastVertex: function () {
 		if (this._markers.length === 0) {
@@ -186,7 +188,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			this._markers = [];
 
 			this._poly = new L.Polyline([], this.options.shapeOptions);
-			this.tooltip.innerHTML = this._getTooltipText().text;
+			this.panel.updateToolTip(this._getTooltipText().text);
 		}
 	},
 
@@ -282,7 +284,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		// }
 
 		if (!this._errorShown) {
-			this.tooltip.innerHTML = text;
+			this.panel.updateToolTip(text);
 		}
 	},
 
@@ -390,7 +392,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._errorShown = true;
 
 		// Update tooltip
-		this.tooltip.innerHTML = this.options.drawError.message;
+		this.panel.updateToolTip(this.options.drawError.message);
 
 		// Update shape
 		this._updateGuideColor(this.options.drawError.color);
@@ -407,7 +409,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._clearHideErrorTimeout();
 
 		// Revert tooltip
-		this.tooltip.innerHTML = this._getTooltipText().text;
+		this.panel.updateToolTip(this._getTooltipText().text);
 
 		// Revert shape
 		this._updateGuideColor(this.options.shapeOptions.color);

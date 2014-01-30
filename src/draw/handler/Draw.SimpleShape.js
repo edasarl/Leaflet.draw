@@ -16,7 +16,8 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 		if (this._map) {
 			//TODO refactor: move cursor to styles
 			this._container.style.cursor = 'crosshair';
-			this.tooltip.innerHTML = this._initialLabelText;
+			this.panel.show(true);
+			this.panel.updateToolTip(this._initialLabelText);
 			this._map
 				.on('click', this._onMouseDown, this)
 				.on('mousemove', this._onMouseMove, this);
@@ -28,6 +29,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 		if (this._map) {
 			//TODO refactor: move cursor to styles
 			this._container.style.cursor = '';
+			this.panel.hide();
 
 			this._map
 				.off('click', this._onMouseDown, this)
@@ -41,13 +43,11 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 		}
 		this._isDrawing = false;
 	},
-
 	_onMouseDown: function (e) {
 		if (this._isDrawing) {
 			if (this._shape) {
 				this._fireCreatedEvent();
 			}
-			this._map.dragging.enable();
 			if (!this.options.repeatMode) {
 				this.disable();
 			} else {
@@ -59,7 +59,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 						delete this._shape;
 					}
 				}
-				this.tooltip.innerHTML = this._initialLabelText;
+				this.panel.updateToolTip(this._initialLabelText);
 				this._isDrawing = false;
 			}
 			return;
@@ -67,7 +67,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 			this._isDrawing = true;
 			this._startLatLng = e.latlng;
 			L.DomEvent.preventDefault(e.originalEvent);
-			this.tooltip.innerHTML = this._endLabelText;
+			this.panel.updateToolTip(this._endLabelText);
 		}
 	},
 
