@@ -1003,6 +1003,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this.backup();
 			this.rectangleLayer.on('layeradd', this._backupLayer, this);
 			this._map.on('click editstart', this._blur, this);
+			this._map.on('delete', this._remove, this);
 		}
 	},
 	backup: function () {
@@ -1011,6 +1012,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	removeHooks: function () {
 		L.Draw.SimpleShape.prototype.removeHooks.call(this);
 		if (this._map) {
+			this._map.off('delete', this._remove, this);
 			this._map.off('click editstart', this._blur, this);
 			if (this._coordsMarker) {
 				this._map.removeLayer(this._coordsMarker);
@@ -1049,8 +1051,9 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this._map.off('click', this._onMouseDown, this);
 		}
 	},
-	_remove: function (e) {
-		var layer = e.layer;
+	_remove: function () {
+		var layer = this.focused;
+		this._blur();
 		this.viewLayer.removeLayer(layer);
 		this.rectangleLayer.removeLayer(layer._rectangle);
 		this._deletedLayers.addLayer(layer);
