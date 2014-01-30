@@ -1026,6 +1026,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (!this.focused) {
 			return;
 		}
+		L.DomUtil.removeClass(this.focused._icon, 'active');
 		this.panel.blurView();
 		this.focused = null;
 		var self = this;
@@ -1039,9 +1040,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			return;
 		} else {
 			if (this.focused) {
+				L.DomUtil.removeClass(this.focused._icon, 'active');
 				this.panel.blurView();
 			}
 			this.focused = layer;
+			L.DomUtil.addClass(this.focused._icon, 'active');
 			this.panel.focusView(layer);
 			this._map.off('click', this._onMouseDown, this);
 		}
