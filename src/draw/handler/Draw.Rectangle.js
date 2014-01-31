@@ -40,6 +40,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			self._fireCreatedEvent(e);
 			self.removeHooks();
 		});
+		map.on('viewFocus', function (e) {
+			if (self._isDrawing) { return; }
+			self.enable();
+			self._onClick(e);
+		});
 	},
 	addHooks: function () {
 		L.Draw.SimpleShape.prototype.addHooks.call(this);
