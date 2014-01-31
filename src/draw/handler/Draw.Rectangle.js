@@ -1,4 +1,46 @@
 L.ViewMarker = L.Marker.extend({});
+// L.ViewMarker.prototype.focus = function() {
+// 	var layer = this;
+// 	var map = layer._map;
+// 	layer._rectangle.setStyle({opacity: 1, color: '#000000'});
+// 	if (layer.uiPopup) return;
+// 	var container = $('#view-toolbar').clone().removeAttr('id');
+// 	var uiPopup = new PrefLayer({offset: [0, 0]}, layer.getLatLng(), container);
+// 	map.addLayer(uiPopup);
+// 	layer.uiPopup = uiPopup;
+// 	$(layer._icon).addClass('active');
+// };
+
+// L.ViewMarker.prototype.blur = function() {
+// 	var layer = this;
+// 	var map = layer._map;
+// 	layer._rectangle.setStyle(L.ViewMarker.defaultOptions);
+// 	layer.setIcon(L.ViewMarker.prefIcon); // this ?
+// 	map.removeLayer(layer.uiPopup);
+// 	$(layer._icon).removeClass('active');
+// 	delete layer.uiPopup;
+// };
+
+L.ViewMarker.defaultOptions = {
+	color: '#555',
+	weight: 2,
+	opacity: 0.5,
+	dashArray: '5, 5',
+	fill: false,
+	fillColor: null, //same as color by default
+	fillOpacity: 0.2,
+	clickable: false
+};
+
+L.ViewMarker.prefIcon = L.divIcon({
+	className: 'view-button view-preference'
+});
+
+// L.ViewMarker.prototype._setStyle = L.ViewMarker.prototype.setStyle;
+// L.ViewMarker.prototype.setStyle = function(style) {
+// 	if (!style) this.options = L.extend({}, this.defaultOptions);
+// 	return this._setStyle(style);
+// };
 
 L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	statics: {
