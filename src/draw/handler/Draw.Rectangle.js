@@ -91,7 +91,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	addHooks: function () {
 		L.Draw.SimpleShape.prototype.addHooks.call(this);
 		if (this._map) {
-			this.viewLayer.on('click', this._onClick, this);
 			this.backup();
 			this.rectangleLayer.on('layeradd', this._backupLayer, this);
 			this._map.on('click editstart', this._blur, this);
@@ -110,8 +109,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 				this._map.removeLayer(this._coordsMarker);
 				this._coordsMarker = null;
 			}
-			this.focused = null;
-			this.viewLayer.off('click', this._onClick, this);
+			if (this.focused) {
+				L.DomUtil.removeClass(this.focused._icon, 'active');
+				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
+				this.focused = null;
+			}
 			this.rectangleLayer.off('layeradd', this._backupLayer, this);
 			this.save();
 		}
@@ -120,7 +122,9 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (!this.focused) {
 			return;
 		}
+		this._container.style.cursor = 'crosshair';
 		L.DomUtil.removeClass(this.focused._icon, 'active');
+		this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
 		this.panel.blurView();
 		this.focused = null;
 		var self = this;
@@ -133,11 +137,14 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (this.focused === layer) {
 			return;
 		} else {
+			this._container.style.cursor = '';
 			if (this.focused) {
 				L.DomUtil.removeClass(this.focused._icon, 'active');
+				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
 				this.panel.blurView();
 			}
 			this.focused = layer;
+			layer._rectangle.setStyle({opacity: 1, color: '#000000'});
 			L.DomUtil.addClass(this.focused._icon, 'active');
 			this.panel.focusView(layer);
 			this._map.off('click', this._onMouseDown, this);
@@ -166,6 +173,9 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	cancel: function () {
 		var self = this;
+		if (this.focused && this.newViews.hasLayer(this.focused._rectangle)) {
+			this._blur();
+		}
 		this._deletedLayers.eachLayer(function (layer) {
 			self.viewLayer.addLayer(layer);
 			self.rectangleLayer.addLayer(layer._rectangle);
