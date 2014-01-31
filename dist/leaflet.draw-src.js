@@ -954,6 +954,48 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 });
 
 L.ViewMarker = L.Marker.extend({});
+// L.ViewMarker.prototype.focus = function() {
+// 	var layer = this;
+// 	var map = layer._map;
+// 	layer._rectangle.setStyle({opacity: 1, color: '#000000'});
+// 	if (layer.uiPopup) return;
+// 	var container = $('#view-toolbar').clone().removeAttr('id');
+// 	var uiPopup = new PrefLayer({offset: [0, 0]}, layer.getLatLng(), container);
+// 	map.addLayer(uiPopup);
+// 	layer.uiPopup = uiPopup;
+// 	$(layer._icon).addClass('active');
+// };
+
+// L.ViewMarker.prototype.blur = function() {
+// 	var layer = this;
+// 	var map = layer._map;
+// 	layer._rectangle.setStyle(L.ViewMarker.defaultOptions);
+// 	layer.setIcon(L.ViewMarker.prefIcon); // this ?
+// 	map.removeLayer(layer.uiPopup);
+// 	$(layer._icon).removeClass('active');
+// 	delete layer.uiPopup;
+// };
+
+L.ViewMarker.defaultOptions = {
+	color: '#555',
+	weight: 2,
+	opacity: 0.5,
+	dashArray: '5, 5',
+	fill: false,
+	fillColor: null, //same as color by default
+	fillOpacity: 0.2,
+	clickable: false
+};
+
+L.ViewMarker.prefIcon = L.divIcon({
+	className: 'view-button view-preference'
+});
+
+// L.ViewMarker.prototype._setStyle = L.ViewMarker.prototype.setStyle;
+// L.ViewMarker.prototype.setStyle = function(style) {
+// 	if (!style) this.options = L.extend({}, this.defaultOptions);
+// 	return this._setStyle(style);
+// };
 
 L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	statics: {
@@ -995,11 +1037,15 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			self._fireCreatedEvent(e);
 			self.removeHooks();
 		});
+		map.on('viewFocus', function (e) {
+			if (self._isDrawing) { return; }
+			self.enable();
+			self._onClick(e);
+		});
 	},
 	addHooks: function () {
 		L.Draw.SimpleShape.prototype.addHooks.call(this);
 		if (this._map) {
-			this.viewLayer.on('click', this._onClick, this);
 			this.backup();
 			this.rectangleLayer.on('layeradd', this._backupLayer, this);
 			this._map.on('click editstart', this._blur, this);
@@ -1018,8 +1064,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 				this._map.removeLayer(this._coordsMarker);
 				this._coordsMarker = null;
 			}
-			this.focused = null;
-			this.viewLayer.off('click', this._onClick, this);
+			if (this.focused) {
+				L.DomUtil.removeClass(this.focused._icon, 'active');
+				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
+				this.focused = null;
+			}
 			this.rectangleLayer.off('layeradd', this._backupLayer, this);
 			this.save();
 		}
@@ -1028,7 +1077,9 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (!this.focused) {
 			return;
 		}
+		this._container.style.cursor = 'crosshair';
 		L.DomUtil.removeClass(this.focused._icon, 'active');
+		this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
 		this.panel.blurView();
 		this.focused = null;
 		var self = this;
@@ -1041,11 +1092,14 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (this.focused === layer) {
 			return;
 		} else {
+			this._container.style.cursor = '';
 			if (this.focused) {
 				L.DomUtil.removeClass(this.focused._icon, 'active');
+				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
 				this.panel.blurView();
 			}
 			this.focused = layer;
+			layer._rectangle.setStyle({opacity: 1, color: '#000000'});
 			L.DomUtil.addClass(this.focused._icon, 'active');
 			this.panel.focusView(layer);
 			this._map.off('click', this._onMouseDown, this);
@@ -1074,6 +1128,9 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	cancel: function () {
 		var self = this;
+		if (this.focused && this.newViews.hasLayer(this.focused._rectangle)) {
+			this._blur();
+		}
 		this._deletedLayers.eachLayer(function (layer) {
 			self.viewLayer.addLayer(layer);
 			self.rectangleLayer.addLayer(layer._rectangle);
