@@ -112,10 +112,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			if (this.focused) {
 				L.DomUtil.removeClass(this.focused._icon, 'active');
 				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
+				this.panel.blurView();
 				this.focused = null;
 			}
 			this.rectangleLayer.off('layeradd', this._backupLayer, this);
-			this.save();
+			this.save(true);
 		}
 	},
 	_blur: function () {
@@ -191,7 +192,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			rectangle.editing.updateMarkers();
 		});
 	},
-	save: function () {
+	save: function (exiting) {
 		var self = this;
 		this._deletedLayers.eachLayer(function (viewMarker) {
 			if (self.newViews.hasLayer(viewMarker._rectangle)) {
@@ -215,8 +216,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			}
 		});
 		this._map.fire('draw:edited', {layers: editedLayers});
-		this._uneditedLayerProps = {};
-		this.backup();
+		if (exiting !== true)
+		{
+			this._uneditedLayerProps = {};
+			this.backup();
+		}
 	},
 	_drawShape: function (prevLatlng) {
 		var latlng = this._map._roundLatlng(this._startLatLng, prevLatlng, 10, 40)[0];
