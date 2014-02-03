@@ -157,11 +157,14 @@ L.Draw.Feature = L.Handler.extend({
 					latlngs: L.LatLngUtil.cloneLatLngs(layer.getLatLngs())
 				};
 				if (layer._icon) {
-					this._uneditedLayerProps[id].icon = layer._icon.options.icon;
 					this._uneditedLayerProps[id].iconLatLng = L.LatLngUtil.cloneLatLng(layer._icon.getLatLng());
-					this._uneditedLayerProps[id].icon.width = layer._icon.width;
-					this._uneditedLayerProps[id].icon.height = layer._icon.height;
-					this._uneditedLayerProps[id].icon.fullscreen = layer._icon.fullscreen;
+					this._uneditedLayerProps[id].width = layer._icon.width;
+					this._uneditedLayerProps[id].height = layer._icon.height;
+					this._uneditedLayerProps[id].fullscreen = layer._icon.fullscreen;
+					this._uneditedLayerProps[id].minzoom = layer._icon.minzoom;
+					this._uneditedLayerProps[id].maxzoom = layer._icon.maxzoom;
+					this._uneditedLayerProps[id]._interface = layer._icon._interface;
+
 				}
 			} else if (layer instanceof L.Circle) {
 				this._uneditedLayerProps[id] = {
@@ -186,11 +189,13 @@ L.Draw.Feature = L.Handler.extend({
 			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
 				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
 				if (layer._icon) {
-					layer._icon.setIcon(this._uneditedLayerProps[id].icon);
 					layer._icon.setLatLng(this._uneditedLayerProps[id].iconLatLng);
-					layer._icon.width = this._uneditedLayerProps[id].icon.width;
-					layer._icon.height = this._uneditedLayerProps[id].icon.height;
-					layer._icon.fullscreen = this._uneditedLayerProps[id].icon.fullscreen;
+					layer._icon.width = this._uneditedLayerProps[id].width;
+					layer._icon.height = this._uneditedLayerProps[id].height;
+					layer._icon.fullscreen = this._uneditedLayerProps[id].fullscreen;
+					layer._icon.minzoom = this._uneditedLayerProps[id].minzoom;
+					layer._icon.maxzoom = this._uneditedLayerProps[id].maxzoom;
+					layer._icon._interface = this._uneditedLayerProps[id]._interface;
 				}
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
@@ -1067,10 +1072,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			if (this.focused) {
 				L.DomUtil.removeClass(this.focused._icon, 'active');
 				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
+				this.panel.blurView();
 				this.focused = null;
 			}
 			this.rectangleLayer.off('layeradd', this._backupLayer, this);
-			this.save();
+			this.save(true);
 		}
 	},
 	_blur: function () {
@@ -1128,7 +1134,8 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	cancel: function () {
 		var self = this;
-		if (this.focused && this.newViews.hasLayer(this.focused._rectangle)) {
+		if (this.focused && (this.focused._rectangle.edited ||
+				this.newViews.hasLayer(this.focused._rectangle))) {
 			this._blur();
 		}
 		this._deletedLayers.eachLayer(function (layer) {
@@ -1146,7 +1153,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			rectangle.editing.updateMarkers();
 		});
 	},
-	save: function () {
+	save: function (exiting) {
 		var self = this;
 		this._deletedLayers.eachLayer(function (viewMarker) {
 			if (self.newViews.hasLayer(viewMarker._rectangle)) {
@@ -1170,8 +1177,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			}
 		});
 		this._map.fire('draw:edited', {layers: editedLayers});
-		this._uneditedLayerProps = {};
-		this.backup();
+		if (exiting !== true)
+		{
+			this._uneditedLayerProps = {};
+			this.backup();
+		}
 	},
 	_drawShape: function (prevLatlng) {
 		var latlng = this._map._roundLatlng(this._startLatLng, prevLatlng, 10, 40)[0];
