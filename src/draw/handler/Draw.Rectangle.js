@@ -174,7 +174,8 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	cancel: function () {
 		var self = this;
-		if (this.focused && this.newViews.hasLayer(this.focused._rectangle)) {
+		if (this.focused && (this.focused._rectangle.edited ||
+				this.newViews.hasLayer(this.focused._rectangle))) {
 			this._blur();
 		}
 		this._deletedLayers.eachLayer(function (layer) {
