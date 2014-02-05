@@ -109,9 +109,9 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	_fireCreatedEvent: function () {
 		var marker = new L.Marker(this.latlng);
 
-		var style = this._map.defaultStyles && this._map.defaultStyles.marker;
-		if (style) {
-			marker.setStyle(style);
+		var markerProps = this._map.defaultProperties && this._map.defaultProperties.marker;
+		if (markerProps) {
+			marker.setStyle(markerProps.style);
 		}
 
 		this.drawLayer.addLayer(marker);
