@@ -19,11 +19,12 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 		}
 	},
 
-	initialize: function (map, options, featureGroup) {
-		L.Draw.Polyline.prototype.initialize.call(this, map, options, featureGroup);
+	initialize: function (map, options, featureGroup, defaultProperties) {
+		L.Draw.Polyline.prototype.initialize.call(this, map, options, featureGroup, defaultProperties);
 
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Polygon.TYPE;
+		this.defaultProperties = defaultProperties && defaultProperties.polygon;
 	},
 
 	_updateFinishHandler: function () {

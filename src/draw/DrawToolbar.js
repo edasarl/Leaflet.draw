@@ -26,17 +26,20 @@ L.DrawToolbar = L.Toolbar.extend({
 		return [
 			{
 				enabled: this.options.marker,
-				handler: new L.Draw.Marker(map, this.options.marker, featureGroup),
+				handler: new L.Draw.Marker(map, this.options.marker, featureGroup,
+					this.options.defaultProperties),
 				title: L.drawLocal.draw.toolbar.buttons.marker
 			},
 			{
 				enabled: this.options.polyline,
-				handler: new L.Draw.Polyline(map, this.options.polyline, featureGroup),
+				handler: new L.Draw.Polyline(map, this.options.polyline, featureGroup,
+					this.options.defaultProperties),
 				title: L.drawLocal.draw.toolbar.buttons.polyline
 			},
 			{
 				enabled: this.options.polygon,
-				handler: new L.Draw.Polygon(map, this.options.polygon, featureGroup),
+				handler: new L.Draw.Polygon(map, this.options.polygon, featureGroup,
+					this.options.defaultProperties),
 				title: L.drawLocal.draw.toolbar.buttons.polygon
 			},
 			{

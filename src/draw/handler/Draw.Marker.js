@@ -9,13 +9,14 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		zIndexOffset: 2000 // This should be > than the highest z-index any markers
 	},
 
-	initialize: function (map, options, featureGroup) {
+	initialize: function (map, options, featureGroup, defaultProperties) {
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Marker.TYPE;
 
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.globalDrawLayer = featureGroup;
+		this.defaultProperties = defaultProperties && defaultProperties.marker;
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
@@ -107,17 +108,12 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this._uneditedLayerProps = {};
 	},
 	_fireCreatedEvent: function () {
-		var marker = new L.Marker(this.latlng, {
-			icon: L.divIcon({
-				className: 'cartes-icon',
-				html: '<div><p class="square"' +
-				'style="color: rgb(238, 238, 238); background-color: rgb(17, 17, 17);' +
-				'border-width: 0px; border-color: rgb(17, 17, 17); font-size: 1rem;">' +
-				'&nbsp;&nbsp;&nbsp;&nbsp;</p></div>',
-				iconSize: null,
-				iconAnchor: null
-			})
-		});
+		var marker = new L.Marker(this.latlng);
+
+		if (this.defaultProperties) {
+			marker.setProperties(this.defaultProperties).draw();
+		}
+
 		this.drawLayer.addLayer(marker);
 		marker.dragging.enable();
 	}
