@@ -107,13 +107,17 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this._uneditedLayerProps = {};
 	},
 	_fireCreatedEvent: function () {
-		var marker = new L.Marker(this.latlng);
-
-		var markerProps = this._map.defaultProperties && this._map.defaultProperties.marker;
-		if (markerProps) {
-			marker.setStyle(markerProps.style);
-		}
-
+		var marker = new L.Marker(this.latlng, {
+			icon: L.divIcon({
+				className: 'cartes-icon',
+				html: '<div><p class="square"' +
+				'style="color: rgb(238, 238, 238); background-color: rgb(17, 17, 17);' +
+				'border-width: 0px; border-color: rgb(17, 17, 17); font-size: 1rem;">' +
+				'&nbsp;&nbsp;&nbsp;&nbsp;</p></div>',
+				iconSize: null,
+				iconAnchor: null
+			})
+		});
 		this.drawLayer.addLayer(marker);
 		marker.dragging.enable();
 	}
