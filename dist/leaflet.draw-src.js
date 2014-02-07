@@ -286,7 +286,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		zIndexOffset: 2000 // This should be > than the highest z-index any map layers
 	},
 
-	initialize: function (map, options, featureGroup) {
+	initialize: function (map, options, featureGroup, defaultProperties) {
 		// Need to set this here to ensure the correct message is used.
 		this.options.drawError.message = L.drawLocal.draw.handlers.polyline.error;
 
@@ -301,6 +301,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.panel = options.panel;
+		this.defaultProperties = defaultProperties && defaultProperties.line;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
 		this._map.on('polyDragStart', function () {
@@ -687,6 +688,10 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_fireCreatedEvent: function () {
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
+
+		if (this.defaultProperties) {
+			poly.setProperties(this.defaultProperties).draw();
+		}
 		this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
 	},
@@ -768,11 +773,12 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 		}
 	},
 
-	initialize: function (map, options, featureGroup) {
-		L.Draw.Polyline.prototype.initialize.call(this, map, options, featureGroup);
+	initialize: function (map, options, featureGroup, defaultProperties) {
+		L.Draw.Polyline.prototype.initialize.call(this, map, options, featureGroup, defaultProperties);
 
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Polygon.TYPE;
+		this.defaultProperties = defaultProperties && defaultProperties.polygon;
 	},
 
 	_updateFinishHandler: function () {
@@ -1326,13 +1332,14 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		zIndexOffset: 2000 // This should be > than the highest z-index any markers
 	},
 
-	initialize: function (map, options, featureGroup) {
+	initialize: function (map, options, featureGroup, defaultProperties) {
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Marker.TYPE;
 
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.globalDrawLayer = featureGroup;
+		this.defaultProperties = defaultProperties && defaultProperties.marker;
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
@@ -1424,17 +1431,12 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this._uneditedLayerProps = {};
 	},
 	_fireCreatedEvent: function () {
-		var marker = new L.Marker(this.latlng, {
-			icon: L.divIcon({
-				className: 'cartes-icon',
-				html: '<div><p class="square"' +
-				'style="color: rgb(238, 238, 238); background-color: rgb(17, 17, 17);' +
-				'border-width: 0px; border-color: rgb(17, 17, 17); font-size: 1rem;">' +
-				'&nbsp;&nbsp;&nbsp;&nbsp;</p></div>',
-				iconSize: null,
-				iconAnchor: null
-			})
-		});
+		var marker = new L.Marker(this.latlng);
+
+		if (this.defaultProperties) {
+			marker.setProperties(this.defaultProperties).draw();
+		}
+
 		this.drawLayer.addLayer(marker);
 		marker.dragging.enable();
 	}
@@ -2783,17 +2785,20 @@ L.DrawToolbar = L.Toolbar.extend({
 		return [
 			{
 				enabled: this.options.marker,
-				handler: new L.Draw.Marker(map, this.options.marker, featureGroup),
+				handler: new L.Draw.Marker(map, this.options.marker, featureGroup,
+					this.options.defaultProperties),
 				title: L.drawLocal.draw.toolbar.buttons.marker
 			},
 			{
 				enabled: this.options.polyline,
-				handler: new L.Draw.Polyline(map, this.options.polyline, featureGroup),
+				handler: new L.Draw.Polyline(map, this.options.polyline, featureGroup,
+					this.options.defaultProperties),
 				title: L.drawLocal.draw.toolbar.buttons.polyline
 			},
 			{
 				enabled: this.options.polygon,
-				handler: new L.Draw.Polygon(map, this.options.polygon, featureGroup),
+				handler: new L.Draw.Polygon(map, this.options.polygon, featureGroup,
+					this.options.defaultProperties),
 				title: L.drawLocal.draw.toolbar.buttons.polygon
 			},
 			{
