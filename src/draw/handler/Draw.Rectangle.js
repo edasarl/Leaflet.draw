@@ -286,5 +286,11 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this.rectangleLayer.addLayer(rectangle);
 		this._coordsMarker = null;
 		this.newViews.addLayer(rectangle);
+		var self = this;
+		if (!e) {
+			setTimeout(function () {
+				self._map.fire('viewFocus', {layer: rectangle._icon});
+			}, 0);
+		}
 	}
 });
