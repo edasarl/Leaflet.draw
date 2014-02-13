@@ -16,7 +16,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.globalDrawLayer = featureGroup;
-		this.defaultProperties = defaultProperties && defaultProperties.marker;
+		this.defaultProperties = defaultProperties && defaultProperties.point;
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
