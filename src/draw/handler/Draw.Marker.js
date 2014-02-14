@@ -1,6 +1,6 @@
 L.Draw.Marker = L.Draw.Feature.extend({
 	statics: {
-		TYPE: 'marker'
+		TYPE: 'point'
 	},
 
 	options: {
