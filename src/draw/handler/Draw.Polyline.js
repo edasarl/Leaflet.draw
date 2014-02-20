@@ -236,11 +236,15 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 		L.DomEvent.preventDefault(e.originalEvent);
 	},
-
-	_onClick: function (e) {
+	blur: function () {
 		if (this.focused) {
 			this._disableLayerEdition(this.focused);
 			this.focused = null;
+			return true;
+		}
+	},
+	_onClick: function (e) {
+		if (this.blur()) {
 			return;
 		}
 		var layer = e.layer;
@@ -253,6 +257,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 				bool = layer instanceof L.Polygon || layer instanceof L.MultiPolygon;
 			}
 			if (bool) {
+				//reload geometry here!!!
 				this._enableLayerEdition(layer);
 				this.focused = layer;
 				return;
@@ -476,6 +481,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.drawLayer.addLayer(poly);
 	},
 	save: function () {
+		this.blur();
 		var self = this;
 
 		var editedLayers = new L.LayerGroup();
@@ -507,6 +513,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._uneditedLayerProps = {};
 	},
 	cancel: function () {
+		this.blur();
 		var self = this;
 		this.drawLayer.eachLayer(function (layer) {
 			self.globalDrawLayer.removeLayer(layer);
