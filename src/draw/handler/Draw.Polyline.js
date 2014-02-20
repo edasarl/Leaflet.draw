@@ -87,11 +87,26 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			self._enableLayerEdit(layer);
 		});
 	},
+	_enableLayerEdition: function (layer) {
+		if (layer instanceof L.featureGroup) {
+			layer.eachLayer(this._enableLayerEdition, this);
+		} else {
+			layer.editing.enable();
+			layer.dragging.enable();
+		}
+	},
+	_disableLayerEdition: function (layer) {
+		if (layer instanceof L.featureGroup) {
+			layer.eachLayer(this._disableLayerEdition, this);
+		} else {
+			layer.editing.disable();
+			layer.dragging.disable();
+		}
+	},
 	_enableLayerEdit: function (e) {
 		var layer = e.layer || e;
 		this._backupLayer(layer);
 	},
-
 	removeHooks: function () {
 		L.Draw.Feature.prototype.removeHooks.call(this);
 
@@ -223,6 +238,27 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	},
 
 	_onClick: function (e) {
+		if (this.focused) {
+			this._disableLayerEdition(this.focused);
+			this.focused = null;
+			return;
+		}
+		var layer = e.layer;
+		if (layer) {
+			var bool;
+			if (this.type === 'polyline') {
+				bool = layer instanceof L.Polyline && !(layer instanceof L.Polygon) ||
+				layer instanceof L.MultiPolyline;
+			} else {
+				bool = layer instanceof L.Polygon || layer instanceof L.MultiPolygon;
+			}
+			if (bool) {
+				this._enableLayerEdition(layer);
+				this.focused = layer;
+				return;
+			}
+		}
+
 		var latlng = e.latlng || e.target.getLatLng();
 
 		this.addVertex(latlng);
