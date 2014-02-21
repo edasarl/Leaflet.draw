@@ -88,7 +88,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		});
 	},
 	_enableLayerEdition: function (layer) {
-		if (layer instanceof L.featureGroup) {
+		if (layer instanceof L.FeatureGroup) {
 			layer.eachLayer(this._enableLayerEdition, this);
 		} else {
 			layer.editing.enable();
@@ -96,7 +96,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 	},
 	_disableLayerEdition: function (layer) {
-		if (layer instanceof L.featureGroup) {
+		if (layer instanceof L.FeatureGroup) {
 			layer.eachLayer(this._disableLayerEdition, this);
 		} else {
 			layer.editing.disable();
