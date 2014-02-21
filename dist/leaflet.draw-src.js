@@ -344,7 +344,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		});
 	},
 	_enableLayerEdition: function (layer) {
-		if (layer instanceof L.featureGroup) {
+		if (layer instanceof L.FeatureGroup) {
 			layer.eachLayer(this._enableLayerEdition, this);
 		} else {
 			layer.editing.enable();
@@ -352,7 +352,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		}
 	},
 	_disableLayerEdition: function (layer) {
-		if (layer instanceof L.featureGroup) {
+		if (layer instanceof L.FeatureGroup) {
 			layer.eachLayer(this._disableLayerEdition, this);
 		} else {
 			layer.editing.disable();
@@ -503,9 +503,10 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		if (this.blur()) {
 			return;
 		}
-		var layer = e.layer;
-		if (layer) {
+		var layer = e.prevTarget;
+		if (layer && this._markers.length === 0) {
 			var bool;
+
 			if (this.type === 'polyline') {
 				bool = layer instanceof L.Polyline && !(layer instanceof L.Polygon) ||
 				layer instanceof L.MultiPolyline;
@@ -513,9 +514,18 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 				bool = layer instanceof L.Polygon || layer instanceof L.MultiPolygon;
 			}
 			if (bool) {
-				//reload geometry here!!!
-				this._enableLayerEdition(layer);
-				this.focused = layer;
+				if (layer.saveId) {
+					var self = this;
+					var enableLayerEdition = this._enableLayerEdition.bind(this);
+					var cb = function (preciseLayer) {
+						enableLayerEdition(preciseLayer);
+						self.focused = preciseLayer;
+					};
+					this.globalDrawLayer.tileLayer.fire('loadGeometry', {layer: layer, cb: cb});
+				} else {
+					this._enableLayerEdition(layer);
+					this.focused = layer;
+				}
 				return;
 			}
 		}
