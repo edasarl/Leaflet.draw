@@ -107,9 +107,9 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this._uneditedLayerProps = {};
 	},
 	_fireCreatedEvent: function () {
-		var marker = new L.Marker(this.latlng);
-
+		var marker = new L.Marker(this.latlng); // could avoid marker.draw() by using this.options.icon
 		this.drawLayer.addLayer(marker);
+		marker.draw();
 		marker.dragging.enable();
 	}
 });
