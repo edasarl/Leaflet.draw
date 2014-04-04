@@ -257,7 +257,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 				bool = layer instanceof L.Polygon || layer instanceof L.MultiPolygon;
 			}
 			if (bool) {
-				if (layer.saveId) {
+				if (layer.refs.id) {
 					var self = this;
 					this.globalDrawLayer.tileLayer.loadGeometry(layer, function (preciseLayer) {
 						self._enableLayerEdition(preciseLayer);
@@ -500,7 +500,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 				layer.edited = edited;
 			}
 			if (layer.edited) {
-				if (layer.saveId) {
+				if (layer.refs.id) {
 					editedLayers.addLayer(layer);
 				}
 				layer.edited = false;
