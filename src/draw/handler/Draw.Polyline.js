@@ -30,7 +30,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		zIndexOffset: 2000 // This should be > than the highest z-index any map layers
 	},
 
-	initialize: function (map, options, featureGroup, defaultProperties) {
+	initialize: function (map, options, featureGroup) {
 		// Need to set this here to ensure the correct message is used.
 		this.options.drawError.message = L.drawLocal.draw.handlers.polyline.error;
 
@@ -45,7 +45,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.panel = options.panel;
-		this.defaultProperties = defaultProperties && defaultProperties.line;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
 		this._map.on('polyDragStart', function () {
@@ -260,12 +259,10 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			if (bool) {
 				if (layer.saveId) {
 					var self = this;
-					var enableLayerEdition = this._enableLayerEdition.bind(this);
-					var cb = function (preciseLayer) {
-						enableLayerEdition(preciseLayer);
+					this.globalDrawLayer.tileLayer.loadGeometry(layer, function(preciseLayer) {
+						self._enableLayerEdition(preciseLayer);
 						self.focused = preciseLayer;
-					};
-					this.globalDrawLayer.tileLayer.fire('loadGeometry', {layer: layer, cb: cb});
+					});
 				} else {
 					this._enableLayerEdition(layer);
 					this.focused = layer;
@@ -483,10 +480,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_fireCreatedEvent: function () {
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
-
-		if (this.defaultProperties) {
-			poly.setProperties(this.defaultProperties).draw();
-		}
 		this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
 	},

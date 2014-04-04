@@ -9,14 +9,13 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		zIndexOffset: 2000 // This should be > than the highest z-index any markers
 	},
 
-	initialize: function (map, options, featureGroup, defaultProperties) {
+	initialize: function (map, options, featureGroup) {
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Marker.TYPE;
 
 		this.drawLayer = L.featureGroup();
 		this.editedLayers = L.layerGroup();
 		this.globalDrawLayer = featureGroup;
-		this.defaultProperties = defaultProperties && defaultProperties.point;
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 	},
@@ -108,12 +107,9 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this._uneditedLayerProps = {};
 	},
 	_fireCreatedEvent: function () {
-		var marker = new L.Marker(this.latlng);
+		var marker = new L.Marker(this.latlng); // could avoid marker.draw() by using this.options.icon
 		this.drawLayer.addLayer(marker);
-
-		if (this.defaultProperties) {
-			marker.setProperties(this.defaultProperties).draw();
-		}
+		marker.draw();
 		marker.dragging.enable();
 	}
 });
