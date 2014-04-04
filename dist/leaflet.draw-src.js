@@ -515,7 +515,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			if (bool) {
 				if (layer.refs.id) {
 					var self = this;
-					this.globalDrawLayer.tileLayer.loadGeometry(layer, function(preciseLayer) {
+					this.globalDrawLayer.tileLayer.loadGeometry(layer, function (preciseLayer) {
 						self._enableLayerEdition(preciseLayer);
 						self.focused = preciseLayer;
 					});
@@ -1481,18 +1481,9 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this._uneditedLayerProps = {};
 	},
 	_fireCreatedEvent: function () {
-<<<<<<< HEAD
-		var marker = new L.Marker(this.latlng);
-		this.drawLayer.addLayer(marker);
-
-		if (this.defaultProperties) {
-			marker.setProperties(this.defaultProperties).draw();
-		}
-=======
 		var marker = new L.Marker(this.latlng); // could avoid marker.draw() by using this.options.icon
 		this.drawLayer.addLayer(marker);
 		marker.draw();
->>>>>>> 7fa079bd027015d20028027a6f8256770c71cd6e
 		marker.dragging.enable();
 	}
 });
