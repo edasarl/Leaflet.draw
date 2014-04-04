@@ -259,7 +259,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 			if (bool) {
 				if (layer.saveId) {
 					var self = this;
-					this.globalDrawLayer.tileLayer.loadGeometry(layer, function(preciseLayer) {
+					this.globalDrawLayer.tileLayer.loadGeometry(layer, function (preciseLayer) {
 						self._enableLayerEdition(preciseLayer);
 						self.focused = preciseLayer;
 					});
