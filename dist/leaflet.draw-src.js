@@ -1491,12 +1491,11 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	},
 	_fireCreatedEvent: function () {
 		var marker = new L.Marker(this.latlng);
+		this.drawLayer.addLayer(marker);
 
 		if (this.defaultProperties) {
 			marker.setProperties(this.defaultProperties).draw();
 		}
-
-		this.drawLayer.addLayer(marker);
 		marker.dragging.enable();
 	}
 });
