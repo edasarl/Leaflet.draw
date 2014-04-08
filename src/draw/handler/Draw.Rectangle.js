@@ -1,46 +1,113 @@
-L.ViewMarker = L.Marker.extend({});
-// L.ViewMarker.prototype.focus = function() {
-// 	var layer = this;
-// 	var map = layer._map;
-// 	layer._rectangle.setStyle({opacity: 1, color: '#000000'});
-// 	if (layer.uiPopup) return;
-// 	var container = $('#view-toolbar').clone().removeAttr('id');
-// 	var uiPopup = new PrefLayer({offset: [0, 0]}, layer.getLatLng(), container);
-// 	map.addLayer(uiPopup);
-// 	layer.uiPopup = uiPopup;
-// 	$(layer._icon).addClass('active');
-// };
+L.View = L.Class.extend({
+	statics: {
+		defaultOptions: {
+			color: '#555',
+			weight: 2,
+			opacity: 0.5,
+			dashArray: '5, 5',
+			fill: false,
+			fillColor: null, //same as color by default
+			fillOpacity: 0.2,
+			clickable: false
+		}
+	},
+	initialize: function (map, startll, endll, options) {
+		this._map = map;
+		this.startll = startll;
+		var latlng = this._map._roundLatlng(this.startll, endll, 10, 40)[0];
+		this.rectangle = new L.Rectangle(new L.LatLngBounds(startll, latlng), options);
+		this.rectangle.view = this;
+		this.setCoordsMarker();
+		this.rectangle._icon = this._coordsMarker;
+		this._coordsMarker._rectangle = this.rectangle;
+	},
+	setCoordsMarker: function () {
+		var bounds = this.rectangle.getBounds(),
+			northEast = this._map.project(bounds._northEast),
+			southWest = this._map.project(bounds._southWest),
+			zoom = this._map.getZoom(),
+			width =  Math.round(northEast.x - southWest.x),
+			height = Math.round(southWest.y - northEast.y),
+			fullScreen = (width === 40 && height === 40);
+		var htmlContent = fullScreen ? 'Plein écran': width + 'x' + height;
 
-// L.ViewMarker.prototype.blur = function() {
-// 	var layer = this;
-// 	var map = layer._map;
-// 	layer._rectangle.setStyle(L.ViewMarker.defaultOptions);
-// 	layer.setIcon(L.ViewMarker.prefIcon); // this ?
-// 	map.removeLayer(layer.uiPopup);
-// 	$(layer._icon).removeClass('active');
-// 	delete layer.uiPopup;
-// };
+		var myIcon = L.divIcon({
+			html: '<div class="coords-icon"> <span class="leaflet-draw-tooltip-single">' + htmlContent + ' z=' + zoom + '</span>' +  '</div>',
+			iconSize: L.Point(40, 40),
+			iconAnchor: [120, -25]
+		});
 
-L.ViewMarker.defaultOptions = {
-	color: '#555',
-	weight: 2,
-	opacity: 0.5,
-	dashArray: '5, 5',
-	fill: false,
-	fillColor: null, //same as color by default
-	fillOpacity: 0.2,
-	clickable: false
-};
+		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
 
-L.ViewMarker.prefIcon = L.divIcon({
-	className: 'view-button view-preference'
+		if (!this._coordsMarker) {
+			this._coordsMarker = new L.ViewMarker(iconLatLng, {icon: myIcon});
+			this._coordsMarker.setZIndexOffset(100002);
+			this._map.addLayer(this._coordsMarker);
+			this._coordsMarker.zoom = zoom;
+			this.rectangle._zoom = zoom;
+			this._coordsMarker._title = '';
+			this._coordsMarker._interface = 'leaflet';
+			this._coordsMarker.minzoom = Math.max(zoom - 2, this._map.getMinZoom());
+			this._coordsMarker.maxzoom = Math.min(zoom + 2, this._map.getMaxZoom());
+		} else {
+			this._coordsMarker.setIcon(myIcon);
+			this._coordsMarker.setLatLng(iconLatLng);
+		}
+		this._coordsMarker.width = width;
+		this._coordsMarker.height = height;
+		this._coordsMarker.fullscreen = fullScreen;
+	},
+	finalize: function () {
+		this._coordsMarker.setIcon(L.ViewMarker.prefIcon);
+	},
+	setBounds: function (endll) {
+		var latlng = this._map._roundLatlng(this.startll, endll, 10, 40)[0];
+		this.rectangle.setBounds(new L.LatLngBounds(this.startll, latlng));
+		this.setCoordsMarker();
+		return this;
+	},
+	getBounds: function () {
+		return this.rectangle.getBounds();
+	},
+
+	setLatLng: function (latLng) {
+		this._coordsMarker.setLatLng(latLng);
+		return this;
+	},
+	getLatLng: function () {
+		return this._coordsMarker.getLatLng();
+	},
+	getRectangle: function () {
+		return this.rectangle;
+	},
+	getMarker: function () {
+		return this._coordsMarker;
+	},
+	getProp: function () {
+		var layer = this.rectangle;
+		var bounds = layer.getBounds();
+		return {
+			center: this._map.getRealCenter(bounds),
+			width: this._coordsMarker.width,
+			height: this._coordsMarker.height,
+			interface: this._coordsMarker._interface,
+			zoom: layer._zoom,
+			minzoom: this._coordsMarker.minzoom,
+			maxzoom: this._coordsMarker.maxzoom,
+			fullscreen: this._coordsMarker.fullscreen,
+		};
+	}
 });
 
-// L.ViewMarker.prototype._setStyle = L.ViewMarker.prototype.setStyle;
-// L.ViewMarker.prototype.setStyle = function(style) {
-// 	if (!style) this.options = L.extend({}, this.defaultOptions);
-// 	return this._setStyle(style);
-// };
+
+
+L.ViewMarker = L.Marker.extend({
+	statics: {
+		prefIcon: L.divIcon({
+			className: 'view-button view-preference'
+		})
+	}
+});
 
 L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	statics: {
@@ -73,15 +140,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 
 		L.Draw.SimpleShape.prototype.initialize.call(this, map, options);
 		var self = this;
-		map.on('createRectangle', function (e) {
-			var llstart = e.llstart,
-				llend = e.llend;
-			self.addHooks();
-			self._startLatLng = llstart;
-			self._drawShape(llend);
-			self._fireCreatedEvent(e);
-			self.removeHooks();
-		});
 		map.on('viewFocus', function (e) {
 			if (self._isDrawing) { return; }
 			self.enable();
@@ -111,7 +169,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			}
 			if (this.focused) {
 				L.DomUtil.removeClass(this.focused._icon, 'active');
-				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
+				this.focused._rectangle.setStyle(L.View.defaultOptions);
 				this.panel.blurView();
 				this.focused = null;
 			}
@@ -125,7 +183,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		}
 		this._container.style.cursor = 'crosshair';
 		L.DomUtil.removeClass(this.focused._icon, 'active');
-		this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
+		this.focused._rectangle.setStyle(L.View.defaultOptions);
 		this.panel.blurView();
 		this.focused = null;
 		var self = this;
@@ -141,7 +199,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this._container.style.cursor = '';
 			if (this.focused) {
 				L.DomUtil.removeClass(this.focused._icon, 'active');
-				this.focused._rectangle.setStyle(L.ViewMarker.defaultOptions);
+				this.focused._rectangle.setStyle(L.View.defaultOptions);
 				this.panel.blurView();
 			}
 			this.focused = layer;
@@ -161,12 +219,9 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	deleteLastVertex: function () {
 		if (this._isDrawing) {
 			if (this._map  && this._shape) {
-				this._map.removeLayer(this._shape);
+				this._map.removeLayer(this._shape.getMarker());
+				this._map.removeLayer(this._shape.getRectangle());
 				delete this._shape;
-				if (this._coordsMarker) {
-					this._map.removeLayer(this._coordsMarker);
-					this._coordsMarker = null;
-				}
 			}
 			this.panel.updateToolTip(this._initialLabelText);
 			this._isDrawing = false;
@@ -203,7 +258,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		});
 
 		this.newViews.eachLayer(function (rectangle) {
-			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, rectangle);
+			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, rectangle.view);
 			rectangle.edited = false;
 		});
 		this.newViews.clearLayers();
@@ -224,73 +279,26 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		}
 	},
 	_drawShape: function (prevLatlng) {
-		var latlng = this._map._roundLatlng(this._startLatLng, prevLatlng, 10, 40)[0];
 		if (!this._shape) {
-			this._shape = new L.Rectangle(new L.LatLngBounds(this._startLatLng, latlng), this.options.shapeOptions);
-			this._map.addLayer(this._shape);
+			this._shape = new L.View(this._map, this._startLatLng, prevLatlng, this.options.shapeOptions);
+			this._map.addLayer(this._shape.getRectangle());
+			this._map.addLayer(this._shape.getMarker());
 		} else {
-			this._shape.setBounds(new L.LatLngBounds(this._startLatLng, latlng));
+			this._shape.setBounds(prevLatlng);
 		}
-		var bounds = this._shape.getBounds(),
-			northEast = this._map.project(bounds._northEast),
-			southWest = this._map.project(bounds._southWest),
-			zoom = this._map.getZoom(),
-			width =  Math.round(northEast.x - southWest.x),
-			height = Math.round(southWest.y - northEast.y),
-			fullScreen = (width === 40 && height === 40);
-		var htmlContent = fullScreen ? 'Plein écran': width + 'x' + height;
-
-		var myIcon = L.divIcon({
-			html: '<div class="coords-icon"> <span class="leaflet-draw-tooltip-single">' + htmlContent + ' z=' + zoom + '</span>' +  '</div>',
-			iconSize: L.Point(40, 40),
-			iconAnchor: [120, -25]
-		});
-
-		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
-
-		if (!this._coordsMarker) {
-			this._coordsMarker = new L.ViewMarker(iconLatLng, {icon: myIcon});
-			this._coordsMarker.setZIndexOffset(100002);
-			this._map.addLayer(this._coordsMarker);
-			this._coordsMarker.zoom = zoom;
-			this._coordsMarker.minzoom = Math.max(zoom - 2, this._map.getMinZoom());
-			this._coordsMarker.maxzoom = Math.min(zoom + 2, this._map.getMaxZoom());
-		} else {
-			this._coordsMarker.setIcon(myIcon);
-			this._coordsMarker.setLatLng(iconLatLng);
-		}
-		this._coordsMarker.width = width;
-		this._coordsMarker.height = height;
-		this._coordsMarker.fullscreen = fullScreen;
 	},
 
-	_fireCreatedEvent: function (e) {
-		var rectangle = new L.Rectangle(this._shape.getBounds(), this.options.shapeOptions);
-		this._coordsMarker._rectangle = rectangle;
-		rectangle._icon = this._coordsMarker;
-		if (e) {
-			this._coordsMarker.saveId = e.saveId;
-			this._coordsMarker.cb = e.cb;
-			this._coordsMarker.osmId = e.osmId;
-		}
-		var zoom = this._map.getZoom();
-		rectangle._zoom = zoom;
-		this._coordsMarker._title = '';
-		this._coordsMarker._interface = 'leaflet';
-		var myIcon =  L.divIcon({
-			className: 'view-button view-preference'
-		});
-		this._coordsMarker.setIcon(myIcon);
-		this._map.removeLayer(this._coordsMarker);
-		this.viewLayer.addLayer(this._coordsMarker);
-		this.rectangleLayer.addLayer(rectangle);
-		this._coordsMarker = null;
-		this.newViews.addLayer(rectangle);
+	_fireCreatedEvent: function () {
+		this._shape.finalize();
+		this._map.removeLayer(this._shape.getMarker());
+		this.viewLayer.addLayer(this._shape.getMarker());
+		this.rectangleLayer.addLayer(this._shape.getRectangle());
+		this.newViews.addLayer(this._shape.getRectangle());
+		var view = this._shape;
+		this._shape = null;
 		var self = this;
-		if (!e) {
-			setTimeout(function () {
-				self._map.fire('viewFocus', {layer: rectangle._icon});
-			}, 0);
-		}
+		setTimeout(function () {
+			self._map.fire('viewFocus', {layer: view.getMarker()});
+		}, 0);
 	}
 });
