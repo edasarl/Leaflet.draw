@@ -17,6 +17,13 @@ L.View = L.Class.extend({
 		var latlng = this._map._roundLatlng(this.startll, endll, 10, 40)[0];
 		this.rectangle = new L.Rectangle(new L.LatLngBounds(startll, latlng), options);
 		this.rectangle.view = this;
+		this._interface = 'leaflet';
+
+		var zoom = this._map.getZoom();
+		this.rectangle._zoom = zoom;
+		this._minzoom = Math.max(zoom - 2, this._map.getMinZoom());
+		this._maxzoom = Math.min(zoom + 2, this._map.getMaxZoom());
+
 		this.setCoordsMarker();
 		this.rectangle._icon = this._coordsMarker;
 		this._coordsMarker._rectangle = this.rectangle;
@@ -25,16 +32,16 @@ L.View = L.Class.extend({
 		var bounds = this.rectangle.getBounds(),
 			northEast = this._map.project(bounds._northEast),
 			southWest = this._map.project(bounds._southWest),
-			zoom = this._map.getZoom(),
 			width =  Math.round(northEast.x - southWest.x),
 			height = Math.round(southWest.y - northEast.y),
 			fullScreen = (width === 40 && height === 40);
 		var htmlContent = fullScreen ? 'Plein écran': width + 'x' + height;
 
 		var myIcon = L.divIcon({
-			html: '<div class="coords-icon"> <span class="leaflet-draw-tooltip-single">' + htmlContent + ' z=' + zoom + '</span>' +  '</div>',
-			iconSize: L.Point(40, 40),
-			iconAnchor: [120, -25]
+			html: '<span class="leaflet-draw-tooltip-single">' + htmlContent + ' z=' +
+			this.rectangle._zoom + '</span>',
+			iconAnchor: [110, -10],
+			className: 'coords-icon'
 		});
 
 		var iconLatLng = [bounds._southWest.lat, bounds._northEast.lng];
@@ -42,27 +49,27 @@ L.View = L.Class.extend({
 		if (!this._coordsMarker) {
 			this._coordsMarker = new L.ViewMarker(iconLatLng, {icon: myIcon});
 			this._coordsMarker.setZIndexOffset(100002);
-			this._map.addLayer(this._coordsMarker);
-			this._coordsMarker.zoom = zoom;
-			this.rectangle._zoom = zoom;
-			this._coordsMarker._title = '';
-			this._coordsMarker._interface = 'leaflet';
-			this._coordsMarker.minzoom = Math.max(zoom - 2, this._map.getMinZoom());
-			this._coordsMarker.maxzoom = Math.min(zoom + 2, this._map.getMaxZoom());
+			this._coordsMarker._rectangle = this.rectangle;
+			this._coordsMarker.view = this;
 		} else {
 			this._coordsMarker.setIcon(myIcon);
 			this._coordsMarker.setLatLng(iconLatLng);
 		}
-		this._coordsMarker.width = width;
-		this._coordsMarker.height = height;
-		this._coordsMarker.fullscreen = fullScreen;
+		this._width = width;
+		this._height = height;
+		this._fullscreen = fullScreen;
 	},
 	finalize: function () {
 		this._coordsMarker.setIcon(L.ViewMarker.prefIcon);
 	},
 	setBounds: function (endll) {
-		var latlng = this._map._roundLatlng(this.startll, endll, 10, 40)[0];
-		this.rectangle.setBounds(new L.LatLngBounds(this.startll, latlng));
+		if (endll instanceof L.LatLngBounds) {
+			this.rectangle.setBounds(endll);
+		} else {
+			var latlng = this._map._roundLatlng(this.startll, endll, 10, 40)[0];
+			this.rectangle.setBounds(new L.LatLngBounds(this.startll, latlng));
+		}
+
 		this.setCoordsMarker();
 		return this;
 	},
@@ -84,18 +91,30 @@ L.View = L.Class.extend({
 		return this._coordsMarker;
 	},
 	getProp: function () {
-		var layer = this.rectangle;
-		var bounds = layer.getBounds();
 		return {
-			center: this._map.getRealCenter(bounds),
-			width: this._coordsMarker.width,
-			height: this._coordsMarker.height,
-			interface: this._coordsMarker._interface,
-			zoom: layer._zoom,
-			minzoom: this._coordsMarker.minzoom,
-			maxzoom: this._coordsMarker.maxzoom,
-			fullscreen: this._coordsMarker.fullscreen,
+			width: this._width,
+			height: this._height,
+			zoom: this.rectangle._zoom,
+			edited: this.rectangle.edited,
+			interface: this._interface,
+			minzoom: this._minzoom,
+			maxzoom: this._maxzoom,
+			fullscreen: this._fullscreen
 		};
+	},
+	setProp: function (obj) {
+		if (obj.interface) {this._interface = obj.interface; }
+		if (obj.minzoom) {this._minzoom = obj.minzoom; }
+		if (obj.maxzoom) {this._maxzoom = obj.maxzoom; }
+		if (obj.edited) {this.rectangle.edited = true; }
+		return this;
+	},
+	getSource: function () {
+		return this.source;
+	},
+	setSource: function (obj) {
+		this.source = obj;
+		return this;
 	}
 });
 
@@ -163,10 +182,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (this._map) {
 			this._map.off('delete', this._remove, this);
 			this._map.off('click editstart', this._blur, this);
-			if (this._coordsMarker) {
-				this._map.removeLayer(this._coordsMarker);
-				this._coordsMarker = null;
-			}
 			if (this.focused) {
 				L.DomUtil.removeClass(this.focused._icon, 'active');
 				this.focused._rectangle.setStyle(L.View.defaultOptions);
