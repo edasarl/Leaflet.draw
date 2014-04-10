@@ -50,7 +50,7 @@ L.Draw.Feature = L.Handler.extend({
 				};
 
 			} else if (layer instanceof L.View) {
-				var props = layer.getProp();
+				var props = layer.getProperties();
 				this._uneditedLayerProps[id] = {
 					bounds: layer.getBounds(),
 					minzoom: props.minzoom,
@@ -80,8 +80,8 @@ L.Draw.Feature = L.Handler.extend({
 				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
 				layer.edited = false;
 			} else if (layer instanceof L.View) {
-				layer.setProp(this._uneditedLayerProps[id]);
-				layer.setProp({edited: false});
+				layer.setProperties(this._uneditedLayerProps[id]);
+				layer.setProperties({edited: false});
 				layer.finalize();
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);

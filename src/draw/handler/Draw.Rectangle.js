@@ -91,7 +91,7 @@ L.View = L.Class.extend({
 	getMarker: function () {
 		return this._coordsMarker;
 	},
-	getProp: function (saving) {
+	getProperties: function (saving) {
 		var obj = {
 			width: this._width,
 			height: this._height,
@@ -106,7 +106,7 @@ L.View = L.Class.extend({
 		}
 		return obj;
 	},
-	setProp: function (obj) {
+	setProperties: function (obj) {
 		if (obj.bounds) {this.setBounds(obj.bounds); }
 		if (obj.interface) {this._interface = obj.interface; }
 		if (obj.minzoom) {this._minzoom = obj.minzoom; }
@@ -146,8 +146,8 @@ L.View = L.Class.extend({
 		L.DomUtil.removeClass(this._coordsMarker._icon, className);
 		return this;
 	},
-	getGeom: function () {
-		return this.rectangle.toGeoJSON().geometry;
+	toGeoJSON: function () {
+		return this.rectangle.toGeoJSON();
 	}
 
 });
@@ -275,7 +275,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	cancel: function () {
 		var self = this;
-		if (this.focused && (this.focused.getProp().edited ||
+		if (this.focused && (this.focused.getProperties().edited ||
 				this.newViews.hasLayer(this.focused))) {
 			this._blur();
 		}
@@ -303,16 +303,16 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 
 		this.newViews.eachLayer(function (view) {
 			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
-			view.setProp({edited: false});
+			view.setProperties({edited: false});
 		});
 		this.newViews.clearLayers();
 		this._map.fire('draw:deleted', {layers: this._deletedLayers});
 		this._deletedLayers.clearLayers();
 		var editedLayers = new L.LayerGroup();
 		this.viewLayer.eachLayer(function (view) {
-			if (view.getProp().edited) {
+			if (view.getProperties().edited) {
 				editedLayers.addLayer(view);
-				view.setProp({edited: false});
+				view.setProperties({edited: false});
 			}
 		});
 		this._map.fire('draw:edited', {layers: editedLayers});
