@@ -91,17 +91,20 @@ L.View = L.Class.extend({
 	getMarker: function () {
 		return this._coordsMarker;
 	},
-	getProp: function () {
-		return {
+	getProp: function (saving) {
+		var obj = {
 			width: this._width,
 			height: this._height,
 			zoom: this.rectangle._zoom,
-			edited: this.rectangle.edited,
 			interface: this._interface,
 			minzoom: this._minzoom,
 			maxzoom: this._maxzoom,
 			fullscreen: this._fullscreen
 		};
+		if (!saving) {
+			obj.edited = this.rectangle.edited;
+		}
+		return obj;
 	},
 	setProp: function (obj) {
 		if (obj.bounds) {this.setBounds(obj.bounds); }
