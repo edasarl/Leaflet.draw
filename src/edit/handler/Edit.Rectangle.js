@@ -104,7 +104,7 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 	},
 
 	_resize: function (latlng) {
-		var roundedBounds = this._map._roundLatlng(this._moveMarker.getLatLng(), latlng, 5, 20);
+		var roundedBounds = this._map._roundLatlng(this._moveMarker.getLatLng(), latlng, 5, 20, this._shape._zoom);
 		this._shape.view.setBounds(L.latLngBounds(roundedBounds[0], roundedBounds[1]));
 
 		// Reposition the move marker

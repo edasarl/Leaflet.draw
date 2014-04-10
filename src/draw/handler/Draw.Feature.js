@@ -44,21 +44,19 @@ L.Draw.Feature = L.Handler.extend({
 		}
 
 		if (!this._uneditedLayerProps[id]) {
-			// Polyline, Polygon or Rectangle
-			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+			if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
 				this._uneditedLayerProps[id] = {
 					latlngs: L.LatLngUtil.cloneLatLngs(layer.getLatLngs())
 				};
-				if (layer._icon) {
-					this._uneditedLayerProps[id].iconLatLng = L.LatLngUtil.cloneLatLng(layer._icon.getLatLng());
-					this._uneditedLayerProps[id].width = layer._icon.width;
-					this._uneditedLayerProps[id].height = layer._icon.height;
-					this._uneditedLayerProps[id].fullscreen = layer._icon.fullscreen;
-					this._uneditedLayerProps[id].minzoom = layer._icon.minzoom;
-					this._uneditedLayerProps[id].maxzoom = layer._icon.maxzoom;
-					this._uneditedLayerProps[id]._interface = layer._icon._interface;
 
-				}
+			} else if (layer instanceof L.View) {
+				var props = layer.getProp();
+				this._uneditedLayerProps[id] = {
+					bounds: layer.getBounds(),
+					minzoom: props.minzoom,
+					maxzoom: props.maxzoom,
+					interface: props.interface
+				};
 			} else if (layer instanceof L.Circle) {
 				this._uneditedLayerProps[id] = {
 					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng()),
@@ -76,25 +74,22 @@ L.Draw.Feature = L.Handler.extend({
 		if (layer instanceof L.FeatureGroup) {
 			return layer.eachLayer(this._revertLayer, this);
 		}
-		layer.edited = false;
 		if (this._uneditedLayerProps.hasOwnProperty(id)) {
 			// Polyline, Polygon or Rectangle
-			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+			if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
 				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
-				if (layer._icon) {
-					layer._icon.setLatLng(this._uneditedLayerProps[id].iconLatLng);
-					layer._icon.width = this._uneditedLayerProps[id].width;
-					layer._icon.height = this._uneditedLayerProps[id].height;
-					layer._icon.fullscreen = this._uneditedLayerProps[id].fullscreen;
-					layer._icon.minzoom = this._uneditedLayerProps[id].minzoom;
-					layer._icon.maxzoom = this._uneditedLayerProps[id].maxzoom;
-					layer._icon._interface = this._uneditedLayerProps[id]._interface;
-				}
+				layer.edited = false;
+			} else if (layer instanceof L.View) {
+				layer.setProp(this._uneditedLayerProps[id]);
+				layer.setProp({edited: false});
+				layer.finalize();
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
 				layer.setRadius(this._uneditedLayerProps[id].radius);
+				layer.edited = false;
 			} else if (layer instanceof L.Marker) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
+				layer.edited = false;
 			}
 		}
 	},
