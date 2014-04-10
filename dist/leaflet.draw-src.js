@@ -151,21 +151,19 @@ L.Draw.Feature = L.Handler.extend({
 		}
 
 		if (!this._uneditedLayerProps[id]) {
-			// Polyline, Polygon or Rectangle
-			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+			if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
 				this._uneditedLayerProps[id] = {
 					latlngs: L.LatLngUtil.cloneLatLngs(layer.getLatLngs())
 				};
-				if (layer._icon) {
-					this._uneditedLayerProps[id].iconLatLng = L.LatLngUtil.cloneLatLng(layer._icon.getLatLng());
-					this._uneditedLayerProps[id].width = layer._icon.width;
-					this._uneditedLayerProps[id].height = layer._icon.height;
-					this._uneditedLayerProps[id].fullscreen = layer._icon.fullscreen;
-					this._uneditedLayerProps[id].minzoom = layer._icon.minzoom;
-					this._uneditedLayerProps[id].maxzoom = layer._icon.maxzoom;
-					this._uneditedLayerProps[id]._interface = layer._icon._interface;
 
-				}
+			} else if (layer instanceof L.View) {
+				var props = layer.getProp();
+				this._uneditedLayerProps[id] = {
+					bounds: layer.getBounds(),
+					minzoom: props.minzoom,
+					maxzoom: props.maxzoom,
+					interface: props.interface
+				};
 			} else if (layer instanceof L.Circle) {
 				this._uneditedLayerProps[id] = {
 					latlng: L.LatLngUtil.cloneLatLng(layer.getLatLng()),
@@ -183,25 +181,22 @@ L.Draw.Feature = L.Handler.extend({
 		if (layer instanceof L.FeatureGroup) {
 			return layer.eachLayer(this._revertLayer, this);
 		}
-		layer.edited = false;
 		if (this._uneditedLayerProps.hasOwnProperty(id)) {
 			// Polyline, Polygon or Rectangle
-			if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+			if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
 				layer.setLatLngs(this._uneditedLayerProps[id].latlngs);
-				if (layer._icon) {
-					layer._icon.setLatLng(this._uneditedLayerProps[id].iconLatLng);
-					layer._icon.width = this._uneditedLayerProps[id].width;
-					layer._icon.height = this._uneditedLayerProps[id].height;
-					layer._icon.fullscreen = this._uneditedLayerProps[id].fullscreen;
-					layer._icon.minzoom = this._uneditedLayerProps[id].minzoom;
-					layer._icon.maxzoom = this._uneditedLayerProps[id].maxzoom;
-					layer._icon._interface = this._uneditedLayerProps[id]._interface;
-				}
+				layer.edited = false;
+			} else if (layer instanceof L.View) {
+				layer.setProp(this._uneditedLayerProps[id]);
+				layer.setProp({edited: false});
+				layer.finalize();
 			} else if (layer instanceof L.Circle) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
 				layer.setRadius(this._uneditedLayerProps[id].radius);
+				layer.edited = false;
 			} else if (layer instanceof L.Marker) {
 				layer.setLatLng(this._uneditedLayerProps[id].latlng);
+				layer.edited = false;
 			}
 		}
 	},
@@ -1010,6 +1005,7 @@ L.Draw.SimpleShape = L.Draw.Feature.extend({
 });
 
 L.View = L.Class.extend({
+	includes: L.Mixin.Events,
 	statics: {
 		defaultOptions: {
 			color: '#555',
@@ -1022,27 +1018,27 @@ L.View = L.Class.extend({
 			clickable: false
 		}
 	},
-	initialize: function (map, startll, endll, options) {
+	initialize: function (map, shape, drawOptions, shapeOptions) {
 		this._map = map;
-		this.startll = startll;
-		var latlng = this._map._roundLatlng(this.startll, endll, 10, 40)[0];
-		this.rectangle = new L.Rectangle(new L.LatLngBounds(startll, latlng), options);
-		this.rectangle.view = this;
-		this._interface = 'leaflet';
+		this.zoom = shape.zoom || this._map.getZoom();
+		this.startll = shape.startll;
+		this.endll = shape.endll;
 
-		var zoom = this._map.getZoom();
-		this.rectangle._zoom = zoom;
-		this._minzoom = Math.max(zoom - 2, this._map.getMinZoom());
-		this._maxzoom = Math.min(zoom + 2, this._map.getMaxZoom());
+		var latlng = shape.round ? this._map._roundLatlng(this.startll, this.endll, 10, 40, this.zoom)[0] : this.endll;
+		this.rectangle = new L.Rectangle(new L.LatLngBounds(this.startll, latlng), drawOptions);
+		this.editing = this.rectangle.editing;
+		this.rectangle._zoom = this.zoom;
+		this.rectangle.view = this;
+		this._interface = shapeOptions && shapeOptions.interface || 'leaflet';
+		this._minzoom = Math.max(shapeOptions && shapeOptions.minzoom || (this.zoom - 2), this._map.getMinZoom());
+		this._maxzoom = Math.min(shapeOptions && shapeOptions.maxzoom || (this.zoom + 2), this._map.getMaxZoom());
 
 		this.setCoordsMarker();
-		this.rectangle._icon = this._coordsMarker;
-		this._coordsMarker._rectangle = this.rectangle;
 	},
 	setCoordsMarker: function () {
 		var bounds = this.rectangle.getBounds(),
-			northEast = this._map.project(bounds._northEast),
-			southWest = this._map.project(bounds._southWest),
+			northEast = this._map.project(bounds._northEast, this.zoom),
+			southWest = this._map.project(bounds._southWest, this.zoom),
 			width =  Math.round(northEast.x - southWest.x),
 			height = Math.round(southWest.y - northEast.y),
 			fullScreen = (width === 40 && height === 40);
@@ -1077,7 +1073,7 @@ L.View = L.Class.extend({
 		if (endll instanceof L.LatLngBounds) {
 			this.rectangle.setBounds(endll);
 		} else {
-			var latlng = this._map._roundLatlng(this.startll, endll, 10, 40)[0];
+			var latlng = this._map._roundLatlng(this.startll, endll, 10, 40, this.zoom)[0];
 			this.rectangle.setBounds(new L.LatLngBounds(this.startll, latlng));
 		}
 
@@ -1114,10 +1110,11 @@ L.View = L.Class.extend({
 		};
 	},
 	setProp: function (obj) {
+		if (obj.bounds) {this.setBounds(obj.bounds); }
 		if (obj.interface) {this._interface = obj.interface; }
 		if (obj.minzoom) {this._minzoom = obj.minzoom; }
 		if (obj.maxzoom) {this._maxzoom = obj.maxzoom; }
-		if (obj.edited) {this.rectangle.edited = true; }
+		if (obj.hasOwnProperty('edited')) {this.rectangle.edited = obj.edited; }
 		return this;
 	},
 	getSource: function () {
@@ -1126,7 +1123,36 @@ L.View = L.Class.extend({
 	setSource: function (obj) {
 		this.source = obj;
 		return this;
+	},
+	onAdd: function (map) {
+		map.addLayer(this.rectangle);
+		map.addLayer(this._coordsMarker);
+		var self = this;
+		this._coordsMarker.on('click', function () {
+			self.fire('click');
+		});
+	},
+	onRemove: function (map) {
+		map.removeLayer(this.rectangle);
+		map.removeLayer(this._coordsMarker);
+		this._coordsMarker.off('click');
+	},
+	setStyle: function (obj) {
+		this.rectangle.setStyle(obj);
+		return this;
+	},
+	addClass: function (className) {
+		L.DomUtil.addClass(this._coordsMarker._icon, className);
+		return this;
+	},
+	removeClass: function (className) {
+		L.DomUtil.removeClass(this._coordsMarker._icon, className);
+		return this;
+	},
+	getGeom: function () {
+		return this.rectangle.toGeoJSON().geometry;
 	}
+
 });
 
 
@@ -1157,13 +1183,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		}
 	},
 
-	initialize: function (map, options, viewLayer, rectangleLayer) {
+	initialize: function (map, options, viewLayer) {
 		// Save the type so super can fire, need to do this as cannot do this.TYPE :(
 		this.type = L.Draw.Rectangle.TYPE;
 
 		this._initialLabelText = L.drawLocal.draw.handlers.rectangle.tooltip.start;
 		this.viewLayer = viewLayer;
-		this.rectangleLayer = rectangleLayer;
 		this._deletedLayers = L.layerGroup();
 		this.newViews = L.layerGroup();
 		this.panel = options.panel;
@@ -1180,13 +1205,13 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		L.Draw.SimpleShape.prototype.addHooks.call(this);
 		if (this._map) {
 			this.backup();
-			this.rectangleLayer.on('layeradd', this._backupLayer, this);
+			this.viewLayer.on('layeradd', this._backupLayer, this);
 			this._map.on('click editstart', this._blur, this);
 			this._map.on('delete', this._remove, this);
 		}
 	},
 	backup: function () {
-		this.rectangleLayer.eachLayer(this._backupLayer, this);
+		this.viewLayer.eachLayer(this._backupLayer, this);
 	},
 	removeHooks: function () {
 		L.Draw.SimpleShape.prototype.removeHooks.call(this);
@@ -1194,12 +1219,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this._map.off('delete', this._remove, this);
 			this._map.off('click editstart', this._blur, this);
 			if (this.focused) {
-				L.DomUtil.removeClass(this.focused._icon, 'active');
-				this.focused._rectangle.setStyle(L.View.defaultOptions);
+				this.focused.removeClass('active');
+				this.focused.setStyle(L.View.defaultOptions);
 				this.panel.blurView();
 				this.focused = null;
 			}
-			this.rectangleLayer.off('layeradd', this._backupLayer, this);
+			this.viewLayer.off('layeradd', this._backupLayer, this);
 			this.save(true);
 		}
 	},
@@ -1208,8 +1233,8 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			return;
 		}
 		this._container.style.cursor = 'crosshair';
-		L.DomUtil.removeClass(this.focused._icon, 'active');
-		this.focused._rectangle.setStyle(L.View.defaultOptions);
+		this.focused.removeClass('active');
+		this.focused.setStyle(L.View.defaultOptions);
 		this.panel.blurView();
 		this.focused = null;
 		var self = this;
@@ -1224,13 +1249,13 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		} else {
 			this._container.style.cursor = '';
 			if (this.focused) {
-				L.DomUtil.removeClass(this.focused._icon, 'active');
-				this.focused._rectangle.setStyle(L.View.defaultOptions);
+				this.focused.removeClass('active');
+				this.focused.setStyle(L.View.defaultOptions);
 				this.panel.blurView();
 			}
 			this.focused = layer;
-			layer._rectangle.setStyle({opacity: 1, color: '#000000'});
-			L.DomUtil.addClass(this.focused._icon, 'active');
+			layer.setStyle({opacity: 1, color: '#000000'});
+			layer.addClass('active');
 			this.panel.focusView(layer);
 			this._map.off('click', this._onMouseDown, this);
 		}
@@ -1239,14 +1264,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		var layer = this.focused;
 		this._blur();
 		this.viewLayer.removeLayer(layer);
-		this.rectangleLayer.removeLayer(layer._rectangle);
 		this._deletedLayers.addLayer(layer);
 	},
 	deleteLastVertex: function () {
 		if (this._isDrawing) {
 			if (this._map  && this._shape) {
-				this._map.removeLayer(this._shape.getMarker());
-				this._map.removeLayer(this._shape.getRectangle());
+				this._map.removeLayer(this._shape);
 				delete this._shape;
 			}
 			this.panel.updateToolTip(this._initialLabelText);
@@ -1255,46 +1278,44 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	cancel: function () {
 		var self = this;
-		if (this.focused && (this.focused._rectangle.edited ||
-				this.newViews.hasLayer(this.focused._rectangle))) {
+		if (this.focused && (this.focused.getProp().edited ||
+				this.newViews.hasLayer(this.focused))) {
 			this._blur();
 		}
 		this._deletedLayers.eachLayer(function (layer) {
 			self.viewLayer.addLayer(layer);
-			self.rectangleLayer.addLayer(layer._rectangle);
 		});
 		this._deletedLayers.clearLayers();
-		this.newViews.eachLayer(function (rectangle) {
-			self.rectangleLayer.removeLayer(rectangle);
-			self.viewLayer.removeLayer(rectangle._icon);
+		this.newViews.eachLayer(function (layer) {
+			self.viewLayer.removeLayer(layer);
 		});
 		this.newViews.clearLayers();
-		this.rectangleLayer.eachLayer(function (rectangle) {
-			self._revertLayer(rectangle);
-			rectangle.editing.updateMarkers();
+		this.viewLayer.eachLayer(function (layer) {
+			self._revertLayer(layer);
+			layer.editing.updateMarkers();
 		});
 	},
 	save: function (exiting) {
 		var self = this;
-		this._deletedLayers.eachLayer(function (viewMarker) {
-			if (self.newViews.hasLayer(viewMarker._rectangle)) {
-				self.newViews.removeLayer(viewMarker._rectangle);
-				self._deletedLayers.removeLayer(viewMarker);
+		this._deletedLayers.eachLayer(function (view) {
+			if (self.newViews.hasLayer(view)) {
+				self.newViews.removeLayer(view);
+				self._deletedLayers.removeLayer(view);
 			}
 		});
 
-		this.newViews.eachLayer(function (rectangle) {
-			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, rectangle.view);
-			rectangle.edited = false;
+		this.newViews.eachLayer(function (view) {
+			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
+			view.setProp({edited: false});
 		});
 		this.newViews.clearLayers();
-		this._map.fire('draw:deleted', { layers: this._deletedLayers });
+		this._map.fire('draw:deleted', {layers: this._deletedLayers});
 		this._deletedLayers.clearLayers();
 		var editedLayers = new L.LayerGroup();
-		this.rectangleLayer.eachLayer(function (layer) {
-			if (layer.edited) {
-				editedLayers.addLayer(layer);
-				layer.edited = false;
+		this.viewLayer.eachLayer(function (view) {
+			if (view.getProp().edited) {
+				editedLayers.addLayer(view);
+				view.setProp({edited: false});
 			}
 		});
 		this._map.fire('draw:edited', {layers: editedLayers});
@@ -1306,9 +1327,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	_drawShape: function (prevLatlng) {
 		if (!this._shape) {
-			this._shape = new L.View(this._map, this._startLatLng, prevLatlng, this.options.shapeOptions);
-			this._map.addLayer(this._shape.getRectangle());
-			this._map.addLayer(this._shape.getMarker());
+			this._shape = new L.View(this._map, {
+				startll: this._startLatLng,
+				endll: prevLatlng,
+				round: true
+			}, this.options.shapeOptions);
+			this._map.addLayer(this._shape);
 		} else {
 			this._shape.setBounds(prevLatlng);
 		}
@@ -1316,15 +1340,14 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 
 	_fireCreatedEvent: function () {
 		this._shape.finalize();
-		this._map.removeLayer(this._shape.getMarker());
-		this.viewLayer.addLayer(this._shape.getMarker());
-		this.rectangleLayer.addLayer(this._shape.getRectangle());
-		this.newViews.addLayer(this._shape.getRectangle());
+		this._map.removeLayer(this._shape);
+		this.viewLayer.addLayer(this._shape);
+		this.newViews.addLayer(this._shape);
 		var view = this._shape;
 		this._shape = null;
 		var self = this;
 		setTimeout(function () {
-			self._map.fire('viewFocus', {layer: view.getMarker()});
+			self._map.fire('viewFocus', {layer: view});
 		}, 0);
 	}
 });
@@ -2033,7 +2056,7 @@ L.Edit.Rectangle = L.Edit.SimpleShape.extend({
 	},
 
 	_resize: function (latlng) {
-		var roundedBounds = this._map._roundLatlng(this._moveMarker.getLatLng(), latlng, 5, 20);
+		var roundedBounds = this._map._roundLatlng(this._moveMarker.getLatLng(), latlng, 5, 20, this._shape._zoom);
 		this._shape.view.setBounds(L.latLngBounds(roundedBounds[0], roundedBounds[1]));
 
 		// Reposition the move marker
@@ -2872,13 +2895,12 @@ L.DrawToolbar = L.Toolbar.extend({
 
 L.ViewToolbar = L.DrawToolbar.extend({
 	getModeHandlers: function (map) {
-		var viewLayer = this.options.viewLayer,
-			rectangleLayer = this.options.rectangleLayer;
+		var viewLayer = this.options.viewLayer;
 
 		return [
 			{
 				enabled: this.options.rectangle,
-				handler: new L.Draw.Rectangle(map, this.options.rectangle, viewLayer, rectangleLayer),
+				handler: new L.Draw.Rectangle(map, this.options.rectangle, viewLayer),
 				title: L.drawLocal.draw.toolbar.buttons.rectangle
 			}
 		];
