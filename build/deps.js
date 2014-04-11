@@ -37,7 +37,8 @@ var deps = {
 			'ext/GeometryUtil.js',
 			'ext/LineUtil.Intersect.js',
 			'ext/Polyline.Intersect.js',
-			'ext/Polygon.Intersect.js'
+			'ext/Polygon.Intersect.js',
+			'ext/Polyline.drag.js'
 		],
 		desc: 'Extensions of leaflet classes.'
 	},

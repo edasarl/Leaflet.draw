@@ -220,6 +220,12 @@ L.EditToolbar.Edit = L.Handler.extend({
 			layer.on('dragend', this._onMarkerDragEnd);
 		} else {
 			layer.editing.enable();
+			if (!(layer instanceof L.Rectangle)) {
+				if (!layer.dragging) {
+					layer.dragging = new L.Handler.PolyDrag(layer);
+				}
+				layer.dragging.enable();
+			}
 		}
 	},
 
@@ -244,6 +250,9 @@ L.EditToolbar.Edit = L.Handler.extend({
 			layer.off('dragend', this._onMarkerDragEnd, this);
 		} else {
 			layer.editing.disable();
+			if (!(layer instanceof L.Rectangle)) {
+				layer.dragging.disable();
+			}
 		}
 	},
 
