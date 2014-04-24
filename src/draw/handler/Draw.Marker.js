@@ -57,8 +57,21 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			this._map.on('click', this._onClick, this);
 
 			this.drawLayer.addTo(this._map);
-			this.globalDrawLayer.eachLayer(this._enableDrag, this);
-			this.globalDrawLayer.on('layeradd', this._enableDrag, this);
+			var self = this;
+			this.globalDrawLayer.eachLayer(
+				function (layer) {
+					if (!layer.subscription) {
+						layer.eachLayer(self._enableDrag, self);
+					}
+				}
+			);
+			this.globalDrawLayer.eachLayer(
+				function (layer) {
+					if (!layer.subscription) {
+						layer.on('layeradd', self._enableDrag, self);
+					}
+				}
+			);
 		}
 	},
 
@@ -67,9 +80,21 @@ L.Draw.Marker = L.Draw.Feature.extend({
 
 		if (this._map) {
 			this.panel.hide();
-			this.globalDrawLayer.eachLayer(this._disableDrag, this);
-			this.globalDrawLayer.off('layeradd', this._enableDrag, this);
-
+			var self = this;
+			this.globalDrawLayer.eachLayer(
+				function (layer) {
+					if (!layer.subscription) {
+						layer.eachLayer(self._disableDrag, self);
+					}
+				}
+			);
+			this.globalDrawLayer.eachLayer(
+				function (layer) {
+					if (!layer.subscription) {
+						layer.off('layeradd', self._enableDrag, self);
+					}
+				}
+			);
 			this._map._container.style.cursor = null;
 			this._map.off('click', this._onClick, this);
 			this._map.off('mousemove', this._onMouseMove, this);

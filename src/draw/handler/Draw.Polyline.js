@@ -43,10 +43,14 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.type = L.Draw.Polyline.TYPE;
 		this.globalDrawLayer = featureGroup;
 		this.drawLayer = L.featureGroup();
+		this.drawLayer.subscription = false;
 		this.editedLayers = L.layerGroup();
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
+		this.drawLayer.on('click', function (e) {
+			self._map.fire('click', e);
+		});
 		this._map.on('polyDragStart', function () {
 			if (self._enabled) {
 				self._map.off('click', self._onClick, self);
@@ -61,8 +65,13 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
-		this.globalDrawLayer
-			.on('layeradd', this._enableLayerEdit, this);
+		var self = this;
+		this.globalDrawLayer.addLayer(this.drawLayer);
+		this.globalDrawLayer.eachLayer(function (layer) {
+			if (!layer.subscription) {
+				layer.on('layeradd', self._enableLayerEdit, self);
+			}
+		});
 		if (this._map) {
 			this.backup();
 			this._markers = [];
@@ -120,19 +129,23 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 		this._map.removeLayer(this._poly);
 		delete this._poly;
-
 		// clean up DOM
 		this._clearGuides();
-
 		this._map
 			.off('mousemove', this._onMouseMove, this)
 			.off('zoomend', this._onZoomEnd, this)
 			.off('click', this._onClick, this);
 		this._map._container.style.cursor = null;
 		this.save();
-		this.globalDrawLayer
-			.off('layeradd', this._enableLayerEdit, this);
+		var self = this;
+
 		this.panel.hide();
+		this.globalDrawLayer.eachLayer(function (layer) {
+			if (!layer.subscription) {
+				layer.off('layeradd', self._enableLayerEdit, self);
+			}
+		});
+		this.globalDrawLayer.removeLayer(this.drawLayer);
 	},
 	deleteLastVertex: function () {
 		if (this._markers.length === 0) {
@@ -246,6 +259,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		if (this.blur()) {
 			return;
 		}
+		console.log(e);
 		var layer = e.prevTarget;
 		if (layer && this._markers.length === 0) {
 			var bool;
@@ -257,9 +271,9 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 				bool = layer instanceof L.Polygon || layer instanceof L.MultiPolygon;
 			}
 			if (bool) {
-				if (layer.refs.id) {
+				if (layer.refs && layer.refs.id) {
 					var self = this;
-					this.globalDrawLayer.tileLayer.loadGeometry(layer, function (preciseLayer) {
+					layer.tileLayer.loadGeometry(layer, function (preciseLayer) {
 						self._enableLayerEdition(preciseLayer);
 						self.focused = preciseLayer;
 					});
@@ -480,7 +494,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_fireCreatedEvent: function () {
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
-		this.globalDrawLayer.addLayer(poly);
+		// this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
 	},
 	save: function () {
@@ -490,37 +504,41 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var editedLayers = new L.LayerGroup();
 
 		this.globalDrawLayer.eachLayer(function (layer) {
-			var edited = false;
-			if (layer instanceof L.FeatureGroup) {
-				layer.eachLayer(function (geo) {
-					if (geo.edited) {
-						edited = true;
+			if (!layer.subscription) {
+				layer.eachLayer(function (feature) {
+					var edited = false;
+					if (feature instanceof L.FeatureGroup) {
+						feature.eachLayer(function (geo) {
+							if (geo.edited) {
+								edited = true;
+							}
+						});
+						feature.edited = edited;
+					}
+					if (feature.edited) {
+						if (feature.refs && feature.refs.id) {
+							editedLayers.addLayer(feature);
+						}
+						feature.edited = false;
 					}
 				});
-				layer.edited = edited;
-			}
-			if (layer.edited) {
-				if (layer.refs.id) {
-					editedLayers.addLayer(layer);
-				}
-				layer.edited = false;
 			}
 		});
 		this._map.fire('draw:edited', {layers: editedLayers});
 
 		this.drawLayer.eachLayer(function (layer) {
 			L.Draw.Feature.prototype._fireCreatedEvent.call(self, layer);
-			self.globalDrawLayer.removeLayer(layer);
+			// self.globalDrawLayer.removeLayer(layer);
 		});
 		this.drawLayer.clearLayers();
 		this._uneditedLayerProps = {};
 	},
 	cancel: function () {
 		this.blur();
-		var self = this;
-		this.drawLayer.eachLayer(function (layer) {
-			self.globalDrawLayer.removeLayer(layer);
-		});
+		// var self = this;
+		// this.drawLayer.eachLayer(function (layer) {
+		// 	self.globalDrawLayer.removeLayer(layer);
+		// });
 		this.drawLayer.clearLayers();
 		this.revertLayers();
 		this._uneditedLayerProps = {};
