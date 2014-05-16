@@ -140,10 +140,12 @@ L.View = L.Class.extend({
 	},
 	addClass: function (className) {
 		L.DomUtil.addClass(this._coordsMarker._icon, className);
+		L.DomUtil.addClass(this.editing._moveMarker._icon, className);
 		return this;
 	},
 	removeClass: function (className) {
 		L.DomUtil.removeClass(this._coordsMarker._icon, className);
+		L.DomUtil.removeClass(this.editing._moveMarker._icon, className);
 		return this;
 	},
 	toGeoJSON: function () {
