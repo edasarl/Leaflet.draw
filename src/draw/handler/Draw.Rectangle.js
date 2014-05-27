@@ -114,13 +114,6 @@ L.View = L.Class.extend({
 		if (obj.hasOwnProperty('edited')) {this.rectangle.edited = obj.edited; }
 		return this;
 	},
-	getSource: function () {
-		return this.source;
-	},
-	setSource: function (obj) {
-		this.source = obj;
-		return this;
-	},
 	onAdd: function (map) {
 		map.addLayer(this.rectangle);
 		map.addLayer(this._coordsMarker);
