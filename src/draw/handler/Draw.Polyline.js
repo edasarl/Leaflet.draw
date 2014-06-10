@@ -259,7 +259,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		if (this.blur()) {
 			return;
 		}
-		console.log(e);
 		var layer = e.prevTarget;
 		if (layer && this._markers.length === 0) {
 			var bool;

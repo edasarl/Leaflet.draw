@@ -510,7 +510,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		if (this.blur()) {
 			return;
 		}
-		console.log(e);
 		var layer = e.prevTarget;
 		if (layer && this._markers.length === 0) {
 			var bool;
@@ -1138,13 +1137,6 @@ L.View = L.Class.extend({
 		if (obj.hasOwnProperty('edited')) {this.rectangle.edited = obj.edited; }
 		return this;
 	},
-	getSource: function () {
-		return this.source;
-	},
-	setSource: function (obj) {
-		this.source = obj;
-		return this;
-	},
 	onAdd: function (map) {
 		map.addLayer(this.rectangle);
 		map.addLayer(this._coordsMarker);
@@ -1267,7 +1259,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	_onClick: function (e) {
 		var layer = e.layer;
-		console.log(layer);
 		if (this.focused === layer) {
 			return;
 		} else {
