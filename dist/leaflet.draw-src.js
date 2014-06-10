@@ -1321,7 +1321,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		});
 
 		this.newViews.eachLayer(function (view) {
-			console.log(view);
 			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
 			view.setProperties({edited: false});
 		});
@@ -1343,7 +1342,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		}
 	},
 	_saveOne: function (e) {
-		console.log(e);
 		var self = this;
 		var view = this.focused;
 		if (this.newViews.hasLayer(view)) {
