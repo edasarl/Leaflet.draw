@@ -207,6 +207,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this.viewLayer.on('layeradd', this._backupLayer, this);
 			this._map.on('click editstart', this._blur, this);
 			this._map.on('delete', this._remove, this);
+			this._map.on('saveOne', this._saveOne, this);
 		}
 	},
 	backup: function () {
@@ -322,6 +323,21 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		{
 			this._uneditedLayerProps = {};
 			this.backup();
+		}
+	},
+	_saveOne: function (e) {
+		var self = this;
+		var view = this.focused;
+		if (this.newViews.hasLayer(view)) {
+			view.saveCb = e.cb;
+			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
+		} else if (view.rectangle.edited) {
+			var editedLayers = new L.LayerGroup([view]);
+			view.setProperties({edited: false});
+			view.saveCb = e.cb;
+			this._map.fire('draw:edited', {layers: editedLayers});
+		} else {
+			e.cb();
 		}
 	},
 	_drawShape: function (prevLatlng) {
