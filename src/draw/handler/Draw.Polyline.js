@@ -59,6 +59,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._map.on('polyDragEnd',  function () {
 			if (self._enabled) {
 				setTimeout(function () {self._map.on('click', self._onClick, self); }, 0);
+				self.panel.enableButtons();
 			}
 		});
 	},
@@ -495,6 +496,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
 		// this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
+		this.panel.enableButtons();
 	},
 	save: function () {
 		this.blur();
@@ -531,17 +533,15 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		});
 		this.drawLayer.clearLayers();
 		this._uneditedLayerProps = {};
+		this.panel.disableButtons();
 	},
 	cancel: function () {
 		this.blur();
-		// var self = this;
-		// this.drawLayer.eachLayer(function (layer) {
-		// 	self.globalDrawLayer.removeLayer(layer);
-		// });
 		this.drawLayer.clearLayers();
 		this.revertLayers();
 		this._uneditedLayerProps = {};
 		this.backup();
+		this.panel.disableButtons();
 	},
 	revertLayers: function () {
 		var self = this;

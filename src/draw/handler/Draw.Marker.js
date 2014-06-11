@@ -39,6 +39,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		var layer = e.target;
 		this.editedLayers.addLayer(layer);
 		layer.edited = true;
+		this.panel.enableButtons();
 	},
 	revertLayers: function () {
 		var self = this;
@@ -121,6 +122,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	cancel: function () {
 		this.drawLayer.clearLayers();
 		this.revertLayers();
+		this.panel.disableButtons();
 	},
 	save: function () {
 		var self = this;
@@ -134,11 +136,13 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer.clearLayers();
 		this.editedLayers.clearLayers();
 		this._uneditedLayerProps = {};
+		this.panel.disableButtons();
 	},
 	_fireCreatedEvent: function () {
 		var marker = new L.Marker(this.latlng); // could avoid marker.draw() by using this.options.icon
 		this.drawLayer.addLayer(marker);
 		marker.draw();
 		marker.dragging.enable();
+		this.panel.enableButtons();
 	}
 });

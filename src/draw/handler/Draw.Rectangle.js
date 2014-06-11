@@ -287,6 +287,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			self._revertLayer(layer);
 			layer.editing.updateMarkers();
 		});
+		this.panel.disableButtons();
 	},
 	save: function (exiting) {
 		var self = this;
@@ -317,6 +318,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this._uneditedLayerProps = {};
 			this.backup();
 		}
+		this.panel.disableButtons();
 	},
 	_saveOne: function (e) {
 		var self = this;
@@ -357,5 +359,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		setTimeout(function () {
 			self._map.fire('viewFocus', {layer: view});
 		}, 0);
+		this.panel.enableButtons();
 	}
 });
