@@ -204,6 +204,7 @@ L.Draw.Feature = L.Handler.extend({
 		var map = this._map;
 
 		if (map) {
+			var self = this;
 			L.DomUtil.disableTextSelection();
 
 			map.getContainer().focus();
@@ -214,11 +215,15 @@ L.Draw.Feature = L.Handler.extend({
 			this._map.on('save', this.save, this);
 			this._map.on('cancel', this.cancel, this);
 			this._map.on('cancelOne', this.deleteLastVertex, this);
+			this._map.on('edit', function () {
+				self.panel.enableButtons();
+			});
 		}
 	},
 
 	removeHooks: function () {
 		if (this._map) {
+			this._map.off('edit');
 			this._map.off('save', this.save, this);
 			this._map.off('cancel', this.cancel, this);
 			this._map.off('cancelOne', this.deleteLastVertex, this);
@@ -310,6 +315,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._map.on('polyDragEnd',  function () {
 			if (self._enabled) {
 				setTimeout(function () {self._map.on('click', self._onClick, self); }, 0);
+				self.panel.enableButtons();
 			}
 		});
 	},
@@ -746,6 +752,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
 		// this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
+		this.panel.enableButtons();
 	},
 	save: function () {
 		this.blur();
@@ -782,30 +789,27 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		});
 		this.drawLayer.clearLayers();
 		this._uneditedLayerProps = {};
+		this.panel.disableButtons();
 	},
 	cancel: function () {
 		this.blur();
-		// var self = this;
-		// this.drawLayer.eachLayer(function (layer) {
-		// 	self.globalDrawLayer.removeLayer(layer);
-		// });
 		this.drawLayer.clearLayers();
 		this.revertLayers();
 		this._uneditedLayerProps = {};
 		this.backup();
+		this.panel.disableButtons();
 	},
 	revertLayers: function () {
-		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-				this._revertLayer(layer);
-				layer.editing.updateMarkers();
-			} else if (layer instanceof L.MultiPolyline) {
-				this._revertLayer(layer);
-				layer.eachLayer(function (geo) {
-					geo.editing.updateMarkers();
-				});
-			}
-		}, this);
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (sublayer) {
+			sublayer.eachLayer(function (layer) {
+				if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
+					this._revertLayer(layer);
+				} else if (layer instanceof L.MultiPolyline) {
+					this._revertLayer(layer);
+				}
+			}, self);
+		});
 	}
 });
 
@@ -911,17 +915,16 @@ L.Draw.Polygon = L.Draw.Polyline.extend({
 		}
 	},
 	revertLayers: function () {
-		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Polygon) {
-				this._revertLayer(layer);
-				layer.editing.updateMarkers();
-			} else if (layer instanceof L.MultiPolygon) {
-				this._revertLayer(layer);
-				layer.eachLayer(function (geo) {
-					geo.editing.updateMarkers();
-				});
-			}
-		}, this);
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (sublayer) {
+			sublayer.eachLayer(function (layer) {
+				if (layer instanceof L.Polygon) {
+					this._revertLayer(layer);
+				} else if (layer instanceof L.MultiPolygon) {
+					this._revertLayer(layer);
+				}
+			}, self);
+		});
 	}
 	// ,
 	// _fireCreatedEvent: function () {
@@ -1310,6 +1313,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			self._revertLayer(layer);
 			layer.editing.updateMarkers();
 		});
+		this.panel.disableButtons();
 	},
 	save: function (exiting) {
 		var self = this;
@@ -1340,6 +1344,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this._uneditedLayerProps = {};
 			this.backup();
 		}
+		this.panel.disableButtons();
 	},
 	_saveOne: function (e) {
 		var self = this;
@@ -1380,6 +1385,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		setTimeout(function () {
 			self._map.fire('viewFocus', {layer: view});
 		}, 0);
+		this.panel.enableButtons();
 	}
 });
 
@@ -1490,13 +1496,18 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		var layer = e.target;
 		this.editedLayers.addLayer(layer);
 		layer.edited = true;
+		this.panel.enableButtons();
 	},
 	revertLayers: function () {
-		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Marker) {
-				this._revertLayer(layer);
-			}
-		}, this);
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (sublayer) {
+			sublayer.eachLayer(function (layer) {
+				if (layer instanceof L.Marker) {
+					self._revertLayer(layer);
+				}
+			}, self);
+
+		});
 	},
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
@@ -1568,6 +1579,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	cancel: function () {
 		this.drawLayer.clearLayers();
 		this.revertLayers();
+		this.panel.disableButtons();
 	},
 	save: function () {
 		var self = this;
@@ -1581,12 +1593,14 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer.clearLayers();
 		this.editedLayers.clearLayers();
 		this._uneditedLayerProps = {};
+		this.panel.disableButtons();
 	},
 	_fireCreatedEvent: function () {
 		var marker = new L.Marker(this.latlng); // could avoid marker.draw() by using this.options.icon
 		this.drawLayer.addLayer(marker);
 		marker.draw();
 		marker.dragging.enable();
+		this.panel.enableButtons();
 	}
 });
 
@@ -1612,6 +1626,7 @@ L.Edit.Poly = L.Handler.extend({
 
 	addHooks: function () {
 		if (this._poly._map) {
+			this._map = this._poly._map;
 			if (!this._markerGroup) {
 				this._initMarkers();
 			}
@@ -1625,6 +1640,7 @@ L.Edit.Poly = L.Handler.extend({
 			delete this._markerGroup;
 			delete this._markers;
 		}
+		this._map = null;
 	},
 
 	updateMarkers: function () {
@@ -1699,6 +1715,7 @@ L.Edit.Poly = L.Handler.extend({
 	_fireEdit: function () {
 		this._poly.edited = true;
 		this._poly.fire('edit');
+		this._map.fire('edit');
 	},
 
 	_onMarkerDrag: function (e) {
@@ -1975,6 +1992,7 @@ L.Edit.SimpleShape = L.Handler.extend({
 	_fireEdit: function () {
 		this._shape.edited = true;
 		this._shape.fire('edit');
+		this._map.fire('edit');
 	},
 
 	_onMarkerDrag: function (e) {
