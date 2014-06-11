@@ -544,16 +544,15 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.backup();
 	},
 	revertLayers: function () {
-		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-				this._revertLayer(layer);
-				layer.editing.updateMarkers();
-			} else if (layer instanceof L.MultiPolyline) {
-				this._revertLayer(layer);
-				layer.eachLayer(function (geo) {
-					geo.editing.updateMarkers();
-				});
-			}
-		}, this);
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (sublayer) {
+			sublayer.eachLayer(function (layer) {
+				if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
+					this._revertLayer(layer);
+				} else if (layer instanceof L.MultiPolyline) {
+					this._revertLayer(layer);
+				}
+			}, self);
+		});
 	}
 });

@@ -41,11 +41,15 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		layer.edited = true;
 	},
 	revertLayers: function () {
-		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Marker) {
-				this._revertLayer(layer);
-			}
-		}, this);
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (sublayer) {
+			sublayer.eachLayer(function (layer) {
+				if (layer instanceof L.Marker) {
+					self._revertLayer(layer);
+				}
+			}, self);
+
+		});
 	},
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
