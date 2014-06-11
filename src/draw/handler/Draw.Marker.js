@@ -65,14 +65,8 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			var self = this;
 			this.globalDrawLayer.eachLayer(
 				function (layer) {
-					if (!layer.subscription) {
+					if (layer.editable) {
 						layer.eachLayer(self._enableDrag, self);
-					}
-				}
-			);
-			this.globalDrawLayer.eachLayer(
-				function (layer) {
-					if (!layer.subscription) {
 						layer.on('layeradd', self._enableDrag, self);
 					}
 				}
@@ -88,14 +82,8 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			var self = this;
 			this.globalDrawLayer.eachLayer(
 				function (layer) {
-					if (!layer.subscription) {
+					if (layer.edtable) {
 						layer.eachLayer(self._disableDrag, self);
-					}
-				}
-			);
-			this.globalDrawLayer.eachLayer(
-				function (layer) {
-					if (!layer.subscription) {
 						layer.off('layeradd', self._enableDrag, self);
 					}
 				}

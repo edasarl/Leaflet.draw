@@ -43,7 +43,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.type = L.Draw.Polyline.TYPE;
 		this.globalDrawLayer = featureGroup;
 		this.drawLayer = L.featureGroup();
-		this.drawLayer.subscription = false;
+		this.drawLayer.editable = true;
 		this.editedLayers = L.layerGroup();
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
@@ -69,7 +69,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var self = this;
 		this.globalDrawLayer.addLayer(this.drawLayer);
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (!layer.subscription) {
+			if (layer.editable) {
 				layer.on('layeradd', self._enableLayerEdit, self);
 			}
 		});
@@ -142,7 +142,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 		this.panel.hide();
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (!layer.subscription) {
+			if (layer.editable) {
 				layer.off('layeradd', self._enableLayerEdit, self);
 			}
 		});
@@ -505,7 +505,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var editedLayers = new L.LayerGroup();
 
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (!layer.subscription) {
+			if (layer.editable) {
 				layer.eachLayer(function (feature) {
 					var edited = false;
 					if (feature instanceof L.FeatureGroup) {
