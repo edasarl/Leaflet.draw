@@ -324,6 +324,8 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (this.newViews.hasLayer(view)) {
 			view.saveCb = e.cb;
 			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
+			view.setProperties({edited: false});
+			this.newViews.removeLayer(view);
 		} else if (view.rectangle.edited) {
 			var editedLayers = new L.LayerGroup([view]);
 			view.setProperties({edited: false});
@@ -331,6 +333,19 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this._map.fire('draw:edited', {layers: editedLayers});
 		} else {
 			e.cb();
+		}
+		var id = L.Util.stamp(view);
+		delete this._uneditedLayerProps[id];
+		this._backupLayer(view);
+
+		if (this.newViews.getLayers().length === 0) {
+			var memo = false;
+			this.viewLayer.eachLayer(function (view) {
+				memo = memo || view.getProperties().edited;
+			});
+			if (!memo) {
+				this.panel.disableButtons();
+			}
 		}
 	},
 	_drawShape: function (prevLatlng) {
