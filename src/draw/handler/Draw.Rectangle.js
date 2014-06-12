@@ -257,7 +257,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		var layer = this.focused;
 		this._blur();
 		this.viewLayer.removeLayer(layer);
-		this._deletedLayers.addLayer(layer);
+		if (this.newViews.hasLayer(layer)) {
+			this.newViews.removeLayer(layer);
+		} else {
+			this._deletedLayers.addLayer(layer);
+		}
+
 	},
 	deleteLastVertex: function () {
 		if (this._isDrawing) {
@@ -291,13 +296,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	save: function (exiting) {
 		var self = this;
-		this._deletedLayers.eachLayer(function (view) {
-			if (self.newViews.hasLayer(view)) {
-				self.newViews.removeLayer(view);
-				self._deletedLayers.removeLayer(view);
-			}
-		});
-
 		this.newViews.eachLayer(function (view) {
 			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
 			view.setProperties({edited: false});
