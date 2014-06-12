@@ -1283,7 +1283,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		var layer = this.focused;
 		this._blur();
 		this.viewLayer.removeLayer(layer);
-		this._deletedLayers.addLayer(layer);
+		if (this.newViews.hasLayer(layer)) {
+			this.newViews.removeLayer(layer);
+		} else {
+			this._deletedLayers.addLayer(layer);
+		}
+
 	},
 	deleteLastVertex: function () {
 		if (this._isDrawing) {
@@ -1317,13 +1322,6 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	},
 	save: function (exiting) {
 		var self = this;
-		this._deletedLayers.eachLayer(function (view) {
-			if (self.newViews.hasLayer(view)) {
-				self.newViews.removeLayer(view);
-				self._deletedLayers.removeLayer(view);
-			}
-		});
-
 		this.newViews.eachLayer(function (view) {
 			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
 			view.setProperties({edited: false});
@@ -1352,6 +1350,8 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		if (this.newViews.hasLayer(view)) {
 			view.saveCb = e.cb;
 			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
+			view.setProperties({edited: false});
+			this.newViews.removeLayer(view);
 		} else if (view.rectangle.edited) {
 			var editedLayers = new L.LayerGroup([view]);
 			view.setProperties({edited: false});
@@ -1359,6 +1359,19 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this._map.fire('draw:edited', {layers: editedLayers});
 		} else {
 			e.cb();
+		}
+		var id = L.Util.stamp(view);
+		delete this._uneditedLayerProps[id];
+		this._backupLayer(view);
+
+		if (this.newViews.getLayers().length === 0) {
+			var memo = false;
+			this.viewLayer.eachLayer(function (view) {
+				memo = memo || view.getProperties().edited;
+			});
+			if (!memo) {
+				this.panel.disableButtons();
+			}
 		}
 	},
 	_drawShape: function (prevLatlng) {
