@@ -1552,7 +1552,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			var self = this;
 			this.globalDrawLayer.eachLayer(
 				function (layer) {
-					if (layer.edtable) {
+					if (layer.editable) {
 						layer.eachLayer(self._disableDrag, self);
 						layer.off('layeradd', self._enableDrag, self);
 					}
