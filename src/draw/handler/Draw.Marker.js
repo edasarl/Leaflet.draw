@@ -118,7 +118,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
 		});
 		this.editedLayers.eachLayer(function (layer) {
-			layer.updateLayer(function() {}, function(err, res) {
+			layer.updateLayer(function () {}, function (err) {
 				this.panel.error('.button.save');
 				throw err;
 			});

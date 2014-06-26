@@ -302,7 +302,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		});
 		this.newViews.clearLayers();
 		this._deletedLayers.eachLayer(function (view) {
-			view.deleteLayer(function(err, res) {
+			view.deleteLayer(function (err) {
 				console.log('error while deleting a view: ', view.refs.id);
 				this.panel.error('.button.delete');
 				throw err;
@@ -311,7 +311,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this._deletedLayers.clearLayers();
 		this.viewLayer.eachLayer(function (view) {
 			if (view.getProperties().edited) {
-				view.updateLayer(function() {}, function(err, res) {
+				view.updateLayer(function () {}, function (err) {
 					this.panel.error('.button.save');
 					throw err;
 				});
@@ -337,7 +337,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		} else if (view.rectangle.edited) {
 			view.setProperties({edited: false});
 			view.saveCb = e.cb;
-			view.updateLayer(function() {}, function(err, res) {
+			view.updateLayer(function () {}, function (err) {
 				this.panel.error('.button.save');
 				throw err;
 			});

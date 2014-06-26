@@ -515,7 +515,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 					}
 					if (feature.edited) {
 						if (feature.refs && feature.refs.id) {
-							feature.updateLayer(function() {}, function(err, res) {
+							feature.updateLayer(function () {}, function (err) {
 								this.panel.error('.button.save');
 								throw err;
 							});

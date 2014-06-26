@@ -136,24 +136,25 @@ L.Draw.Feature = L.Handler.extend({
 	},
 
 	_fireCreatedEvent: function (layer) {
-		if (this.type == 'rectangle') {
-			layer.saveLayer(function(res) {
+		if (this.type === 'rectangle') {
+			layer.saveLayer(function () {
 				if (layer.saveCb) {
 					layer.saveCb();
 					delete layer.saveCb;
 				}
-			}, function(err, res) {
+			}, function (err) {
 					console.log('error while saving a view: ', layer);
 					this.panel.error('.button.save');
 					this.panel.enableButtons();
 					throw err;
-			});
+				}
+			);
 		} else {
 			var carte = this._map.carte;
-			layer.saveLayer(function(res) {
-				carte.tilejson.sources[0].stats[type]++;
+			layer.saveLayer(function () {
+				carte.tilejson.sources[0].stats[this.type]++;
 				carte.redraw();
-			}, function(err, res) {
+			}, function (err) {
 				console.log('error while saving a ' + this.type + ': ', layer);
 				this.panel.error('.button.save');
 				this.panel.enableButtons();
