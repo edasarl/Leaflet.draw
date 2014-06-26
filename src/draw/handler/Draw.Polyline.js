@@ -1,6 +1,6 @@
 L.Draw.Polyline = L.Draw.Feature.extend({
 	statics: {
-		TYPE: 'polyline'
+		TYPE: 'line'
 	},
 
 	Poly: L.Polyline,
@@ -263,7 +263,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		if (layer && this._markers.length === 0) {
 			var bool;
 
-			if (this.type === 'polyline') {
+			if (this.type === 'line') {
 				bool = layer instanceof L.Polyline && !(layer instanceof L.Polygon) ||
 				layer instanceof L.MultiPolyline;
 			} else {
