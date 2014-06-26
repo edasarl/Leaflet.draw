@@ -243,7 +243,31 @@ L.Draw.Feature = L.Handler.extend({
 	},
 
 	_fireCreatedEvent: function (layer) {
-		this._map.fire('draw:created', { layer: layer, layerType: this.type });
+		if (this.type === 'rectangle') {
+			layer.saveLayer(function () {
+				if (layer.saveCb) {
+					layer.saveCb();
+					delete layer.saveCb;
+				}
+			}, function (err) {
+					console.log('error while saving a view: ', layer);
+					this.panel.error('.button.save');
+					this.panel.enableButtons();
+					throw err;
+				}
+			);
+		} else {
+			var carte = this._map.carte;
+			layer.saveLayer(function () {
+				carte.tilejson.sources[0].stats[this.type]++;
+				carte.redraw();
+			}, function (err) {
+				console.log('error while saving a ' + this.type + ': ', layer);
+				this.panel.error('.button.save');
+				this.panel.enableButtons();
+				throw err;
+			});
+		}
 	},
 
 	// Cancel drawing when the escape key is pressed
@@ -757,9 +781,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	save: function () {
 		this.blur();
 		var self = this;
-
-		var editedLayers = new L.LayerGroup();
-
 		this.globalDrawLayer.eachLayer(function (layer) {
 			if (layer.editable) {
 				layer.eachLayer(function (feature) {
@@ -774,15 +795,16 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 					}
 					if (feature.edited) {
 						if (feature.refs && feature.refs.id) {
-							editedLayers.addLayer(feature);
+							feature.updateLayer(function () {}, function (err) {
+								this.panel.error('.button.save');
+								throw err;
+							});
 						}
 						feature.edited = false;
 					}
 				});
 			}
 		});
-		this._map.fire('draw:edited', {layers: editedLayers});
-
 		this.drawLayer.eachLayer(function (layer) {
 			L.Draw.Feature.prototype._fireCreatedEvent.call(self, layer);
 			// self.globalDrawLayer.removeLayer(layer);
@@ -1327,16 +1349,24 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			view.setProperties({edited: false});
 		});
 		this.newViews.clearLayers();
-		this._map.fire('draw:deleted', {layers: this._deletedLayers});
+		this._deletedLayers.eachLayer(function (view) {
+			view.deleteLayer(function (err) {
+				console.log('error while deleting a view: ', view.refs.id);
+				this.panel.error('.button.delete');
+				throw err;
+			});
+		});
 		this._deletedLayers.clearLayers();
-		var editedLayers = new L.LayerGroup();
 		this.viewLayer.eachLayer(function (view) {
 			if (view.getProperties().edited) {
-				editedLayers.addLayer(view);
+				view.updateLayer(function () {}, function (err) {
+					this.panel.error('.button.save');
+					throw err;
+				});
 				view.setProperties({edited: false});
 			}
 		});
-		this._map.fire('draw:edited', {layers: editedLayers});
+		// this._map.fire('draw:edited', {layers: editedLayers});
 		if (exiting !== true)
 		{
 			this._uneditedLayerProps = {};
@@ -1353,10 +1383,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			view.setProperties({edited: false});
 			this.newViews.removeLayer(view);
 		} else if (view.rectangle.edited) {
-			var editedLayers = new L.LayerGroup([view]);
 			view.setProperties({edited: false});
 			view.saveCb = e.cb;
-			this._map.fire('draw:edited', {layers: editedLayers});
+			view.updateLayer(function () {}, function (err) {
+				this.panel.error('.button.save');
+				throw err;
+			});
 		} else {
 			e.cb();
 		}
@@ -1586,6 +1618,12 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		var self = this;
 		this.drawLayer.eachLayer(function (marker) {
 			L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
+		});
+		this.editedLayers.eachLayer(function (layer) {
+			layer.updateLayer(function () {}, function (err) {
+				this.panel.error('.button.save');
+				throw err;
+			});
 		});
 		this._map.fire('draw:edited', {layers: this.editedLayers});
 		this.editedLayers.eachLayer(function (marker) {
