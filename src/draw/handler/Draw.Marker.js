@@ -117,6 +117,12 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer.eachLayer(function (marker) {
 			L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
 		});
+		this.editedLayers.eachLayer(function (layer) {
+			layer.updateLayer(function() {}, function(err, res) {
+				this.panel.error('.button.save');
+				throw err;
+			});
+		});
 		this._map.fire('draw:edited', {layers: this.editedLayers});
 		this.editedLayers.eachLayer(function (marker) {
 			delete marker.edited;

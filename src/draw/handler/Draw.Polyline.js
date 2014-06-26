@@ -501,9 +501,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 	save: function () {
 		this.blur();
 		var self = this;
-
-		var editedLayers = new L.LayerGroup();
-
 		this.globalDrawLayer.eachLayer(function (layer) {
 			if (layer.editable) {
 				layer.eachLayer(function (feature) {
@@ -518,15 +515,16 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 					}
 					if (feature.edited) {
 						if (feature.refs && feature.refs.id) {
-							editedLayers.addLayer(feature);
+							feature.updateLayer(function() {}, function(err, res) {
+								this.panel.error('.button.save');
+								throw err;
+							});
 						}
 						feature.edited = false;
 					}
 				});
 			}
 		});
-		this._map.fire('draw:edited', {layers: editedLayers});
-
 		this.drawLayer.eachLayer(function (layer) {
 			L.Draw.Feature.prototype._fireCreatedEvent.call(self, layer);
 			// self.globalDrawLayer.removeLayer(layer);

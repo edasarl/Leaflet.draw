@@ -301,16 +301,24 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			view.setProperties({edited: false});
 		});
 		this.newViews.clearLayers();
-		this._map.fire('draw:deleted', {layers: this._deletedLayers});
+		this._deletedLayers.eachLayer(function (view) {
+			view.deleteLayer(function(err, res) {
+				console.log('error while deleting a view: ', view.refs.id);
+				this.panel.error('.button.delete');
+				throw err;
+			});
+		});
 		this._deletedLayers.clearLayers();
-		var editedLayers = new L.LayerGroup();
 		this.viewLayer.eachLayer(function (view) {
 			if (view.getProperties().edited) {
-				editedLayers.addLayer(view);
+				view.updateLayer(function() {}, function(err, res) {
+					this.panel.error('.button.save');
+					throw err;
+				});
 				view.setProperties({edited: false});
 			}
 		});
-		this._map.fire('draw:edited', {layers: editedLayers});
+		// this._map.fire('draw:edited', {layers: editedLayers});
 		if (exiting !== true)
 		{
 			this._uneditedLayerProps = {};
@@ -327,10 +335,12 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			view.setProperties({edited: false});
 			this.newViews.removeLayer(view);
 		} else if (view.rectangle.edited) {
-			var editedLayers = new L.LayerGroup([view]);
 			view.setProperties({edited: false});
 			view.saveCb = e.cb;
-			this._map.fire('draw:edited', {layers: editedLayers});
+			view.updateLayer(function() {}, function(err, res) {
+				this.panel.error('.button.save');
+				throw err;
+			});
 		} else {
 			e.cb();
 		}
