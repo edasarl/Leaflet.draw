@@ -39,13 +39,18 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		var layer = e.target;
 		this.editedLayers.addLayer(layer);
 		layer.edited = true;
+		this.panel.enableButtons();
 	},
 	revertLayers: function () {
-		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Marker) {
-				this._revertLayer(layer);
-			}
-		}, this);
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (sublayer) {
+			sublayer.eachLayer(function (layer) {
+				if (layer instanceof L.Marker) {
+					self._revertLayer(layer);
+				}
+			}, self);
+
+		});
 	},
 	addHooks: function () {
 		L.Draw.Feature.prototype.addHooks.call(this);
@@ -60,14 +65,8 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			var self = this;
 			this.globalDrawLayer.eachLayer(
 				function (layer) {
-					if (!layer.subscription) {
+					if (layer.editable) {
 						layer.eachLayer(self._enableDrag, self);
-					}
-				}
-			);
-			this.globalDrawLayer.eachLayer(
-				function (layer) {
-					if (!layer.subscription) {
 						layer.on('layeradd', self._enableDrag, self);
 					}
 				}
@@ -83,14 +82,8 @@ L.Draw.Marker = L.Draw.Feature.extend({
 			var self = this;
 			this.globalDrawLayer.eachLayer(
 				function (layer) {
-					if (!layer.subscription) {
+					if (layer.editable) {
 						layer.eachLayer(self._disableDrag, self);
-					}
-				}
-			);
-			this.globalDrawLayer.eachLayer(
-				function (layer) {
-					if (!layer.subscription) {
 						layer.off('layeradd', self._enableDrag, self);
 					}
 				}
@@ -117,6 +110,7 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	cancel: function () {
 		this.drawLayer.clearLayers();
 		this.revertLayers();
+		this.panel.disableButtons();
 	},
 	save: function () {
 		var self = this;
@@ -130,11 +124,13 @@ L.Draw.Marker = L.Draw.Feature.extend({
 		this.drawLayer.clearLayers();
 		this.editedLayers.clearLayers();
 		this._uneditedLayerProps = {};
+		this.panel.disableButtons();
 	},
 	_fireCreatedEvent: function () {
 		var marker = new L.Marker(this.latlng); // could avoid marker.draw() by using this.options.icon
 		this.drawLayer.addLayer(marker);
 		marker.draw();
 		marker.dragging.enable();
+		this.panel.enableButtons();
 	}
 });

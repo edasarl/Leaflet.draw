@@ -108,6 +108,7 @@ L.Edit.SimpleShape = L.Handler.extend({
 	_fireEdit: function () {
 		this._shape.edited = true;
 		this._shape.fire('edit');
+		this._map.fire('edit');
 	},
 
 	_onMarkerDrag: function (e) {

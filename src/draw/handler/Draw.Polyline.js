@@ -43,7 +43,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.type = L.Draw.Polyline.TYPE;
 		this.globalDrawLayer = featureGroup;
 		this.drawLayer = L.featureGroup();
-		this.drawLayer.subscription = false;
+		this.drawLayer.editable = true;
 		this.editedLayers = L.layerGroup();
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
@@ -59,6 +59,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this._map.on('polyDragEnd',  function () {
 			if (self._enabled) {
 				setTimeout(function () {self._map.on('click', self._onClick, self); }, 0);
+				self.panel.enableButtons();
 			}
 		});
 	},
@@ -68,7 +69,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var self = this;
 		this.globalDrawLayer.addLayer(this.drawLayer);
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (!layer.subscription) {
+			if (layer.editable) {
 				layer.on('layeradd', self._enableLayerEdit, self);
 			}
 		});
@@ -141,7 +142,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 		this.panel.hide();
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (!layer.subscription) {
+			if (layer.editable) {
 				layer.off('layeradd', self._enableLayerEdit, self);
 			}
 		});
@@ -495,6 +496,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
 		// this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
+		this.panel.enableButtons();
 	},
 	save: function () {
 		this.blur();
@@ -503,7 +505,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		var editedLayers = new L.LayerGroup();
 
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (!layer.subscription) {
+			if (layer.editable) {
 				layer.eachLayer(function (feature) {
 					var edited = false;
 					if (feature instanceof L.FeatureGroup) {
@@ -531,29 +533,26 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		});
 		this.drawLayer.clearLayers();
 		this._uneditedLayerProps = {};
+		this.panel.disableButtons();
 	},
 	cancel: function () {
 		this.blur();
-		// var self = this;
-		// this.drawLayer.eachLayer(function (layer) {
-		// 	self.globalDrawLayer.removeLayer(layer);
-		// });
 		this.drawLayer.clearLayers();
 		this.revertLayers();
 		this._uneditedLayerProps = {};
 		this.backup();
+		this.panel.disableButtons();
 	},
 	revertLayers: function () {
-		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-				this._revertLayer(layer);
-				layer.editing.updateMarkers();
-			} else if (layer instanceof L.MultiPolyline) {
-				this._revertLayer(layer);
-				layer.eachLayer(function (geo) {
-					geo.editing.updateMarkers();
-				});
-			}
-		}, this);
+		var self = this;
+		this.globalDrawLayer.eachLayer(function (sublayer) {
+			sublayer.eachLayer(function (layer) {
+				if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
+					this._revertLayer(layer);
+				} else if (layer instanceof L.MultiPolyline) {
+					this._revertLayer(layer);
+				}
+			}, self);
+		});
 	}
 });

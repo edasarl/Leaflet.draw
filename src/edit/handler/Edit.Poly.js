@@ -19,6 +19,7 @@ L.Edit.Poly = L.Handler.extend({
 
 	addHooks: function () {
 		if (this._poly._map) {
+			this._map = this._poly._map;
 			if (!this._markerGroup) {
 				this._initMarkers();
 			}
@@ -32,6 +33,7 @@ L.Edit.Poly = L.Handler.extend({
 			delete this._markerGroup;
 			delete this._markers;
 		}
+		this._map = null;
 	},
 
 	updateMarkers: function () {
@@ -106,6 +108,7 @@ L.Edit.Poly = L.Handler.extend({
 	_fireEdit: function () {
 		this._poly.edited = true;
 		this._poly.fire('edit');
+		this._map.fire('edit');
 	},
 
 	_onMarkerDrag: function (e) {

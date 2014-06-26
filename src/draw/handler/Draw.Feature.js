@@ -97,6 +97,7 @@ L.Draw.Feature = L.Handler.extend({
 		var map = this._map;
 
 		if (map) {
+			var self = this;
 			L.DomUtil.disableTextSelection();
 
 			map.getContainer().focus();
@@ -107,11 +108,15 @@ L.Draw.Feature = L.Handler.extend({
 			this._map.on('save', this.save, this);
 			this._map.on('cancel', this.cancel, this);
 			this._map.on('cancelOne', this.deleteLastVertex, this);
+			this._map.on('edit', function () {
+				self.panel.enableButtons();
+			});
 		}
 	},
 
 	removeHooks: function () {
 		if (this._map) {
+			this._map.off('edit');
 			this._map.off('save', this.save, this);
 			this._map.off('cancel', this.cancel, this);
 			this._map.off('cancelOne', this.deleteLastVertex, this);
