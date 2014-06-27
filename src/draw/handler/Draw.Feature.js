@@ -143,6 +143,9 @@ L.Draw.Feature = L.Handler.extend({
 			carte.tilejson.sources[0].stats[self.type]++;
 			carte.redraw();
 			self.drawLayer.removeLayer(layer);
+			var id = L.Util.stamp(layer);
+			delete self._uneditedLayerProps[id];
+			self._backupLayer(layer);
 		}, function (err) {
 			console.log('error while saving a ' + self.type + ': ', layer);
 			self.panel.error('.button.save');
@@ -158,6 +161,9 @@ L.Draw.Feature = L.Handler.extend({
 			if (self.editedLayers) {
 				self.editedLayers.removeLayer(layer);
 			}
+			var id = L.Util.stamp(layer);
+			delete self._uneditedLayerProps[id];
+			self._backupLayer(layer);
 		}, function (err) {
 			self.panel.error('.button.save');
 			throw err;

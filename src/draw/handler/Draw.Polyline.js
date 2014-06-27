@@ -500,7 +500,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.blur();
 		var self = this;
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer.editable) {
+			if (layer.editable && layer !== self.drawLayer) {
 				layer.eachLayer(function (feature) {
 					var edited = false;
 					if (feature instanceof L.FeatureGroup) {
@@ -512,9 +512,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 						feature.edited = edited;
 					}
 					if (feature.edited) {
-						if (feature.refs && feature.refs.id) {
-							self.updateDb(layer);
-						}
+						self._updateDb(layer);
 					}
 				});
 			}
@@ -522,7 +520,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.drawLayer.eachLayer(function (layer) {
 			self._saveDb(layer);
 		});
-		this._uneditedLayerProps = {};
 		this.panel.disableButtons();
 	},
 	cancel: function () {
