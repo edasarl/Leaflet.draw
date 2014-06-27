@@ -245,13 +245,14 @@ L.Draw.Feature = L.Handler.extend({
 	_fireCreatedEvent: function (layer) {
 		//layer is anything but a view!
 		var carte = this._map.carte;
+		var self = this;
 		layer.saveLayer(function () {
-			carte.tilejson.sources[0].stats[this.type]++;
+			carte.tilejson.sources[0].stats[self.type]++;
 			carte.redraw();
 		}, function (err) {
-			console.log('error while saving a ' + this.type + ': ', layer);
-			this.panel.error('.button.save');
-			this.panel.enableButtons();
+			console.log('error while saving a ' + self.type + ': ', layer);
+			self.panel.error('.button.save');
+			self.panel.enableButtons();
 			throw err;
 		});
 	},
