@@ -337,26 +337,36 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		var self = this;
 		var view = this.focused;
 		if (this.newViews.hasLayer(view)) {
-			view.saveLayer(function (err, res) {
+			view.saveLayer(function () {
 				view.setProperties({edited: false});
 				self.newViews.removeLayer(view);
-				e.cb(err, res);
-			}, function (err) {
+				if (e.done) {
+					e.done();
+				}
+			}, function (err, res) {
 				console.log('error while saving a view: ', view);
 				self.panel.error('.button.save');
 				self.panel.enableButtons();
+				if (e.error) {
+					e.error(err, res);
+				}
 				throw err;
 			});
 		} else if (view.rectangle.edited) {
-			view.updateLayer(function (err, res) {
+			view.updateLayer(function () {
 				view.setProperties({edited: false});
-				e.cb(err, res);
-			}, function (err) {
+				if (e.done) {
+					e.done();
+				}
+			}, function (err, res) {
 				self.panel.error('.button.save');
+				if (e.error) {
+					e.error(err, res);
+				}
 				throw err;
 			});
 		} else {
-			e.cb();
+			e.done();
 		}
 		var id = L.Util.stamp(view);
 		delete this._uneditedLayerProps[id];
