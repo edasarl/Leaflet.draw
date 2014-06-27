@@ -1376,6 +1376,20 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	_saveOne: function (e) {
 		var self = this;
 		var view = this.focused;
+		function finalize() {
+			var id = L.Util.stamp(view);
+			delete self._uneditedLayerProps[id];
+			self._backupLayer(view);
+			if (self.newViews.getLayers().length === 0) {
+				var memo = false;
+				self.viewLayer.eachLayer(function (view) {
+					memo = memo || view.getProperties().edited;
+				});
+				if (!memo) {
+					self.panel.disableButtons();
+				}
+			}
+		}
 		if (this.newViews.hasLayer(view)) {
 			view.saveLayer(function () {
 				view.setProperties({edited: false});
@@ -1383,6 +1397,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 				if (e.done) {
 					e.done();
 				}
+				finalize();
 			}, function (err, res) {
 				console.log('error while saving a view: ', view);
 				self.panel.error('.button.save');
@@ -1398,6 +1413,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 				if (e.done) {
 					e.done();
 				}
+				finalize();
 			}, function (err, res) {
 				self.panel.error('.button.save');
 				if (e.error) {
@@ -1408,19 +1424,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		} else {
 			e.done();
 		}
-		var id = L.Util.stamp(view);
-		delete this._uneditedLayerProps[id];
-		this._backupLayer(view);
 
-		if (this.newViews.getLayers().length === 0) {
-			var memo = false;
-			this.viewLayer.eachLayer(function (view) {
-				memo = memo || view.getProperties().edited;
-			});
-			if (!memo) {
-				this.panel.disableButtons();
-			}
-		}
 	},
 	_drawShape: function (prevLatlng) {
 		if (!this._shape) {
