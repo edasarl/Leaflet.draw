@@ -250,6 +250,9 @@ L.Draw.Feature = L.Handler.extend({
 			carte.tilejson.sources[0].stats[self.type]++;
 			carte.redraw();
 			self.drawLayer.removeLayer(layer);
+			var id = L.Util.stamp(layer);
+			delete self._uneditedLayerProps[id];
+			self._backupLayer(layer);
 		}, function (err) {
 			console.log('error while saving a ' + self.type + ': ', layer);
 			self.panel.error('.button.save');
@@ -265,6 +268,9 @@ L.Draw.Feature = L.Handler.extend({
 			if (self.editedLayers) {
 				self.editedLayers.removeLayer(layer);
 			}
+			var id = L.Util.stamp(layer);
+			delete self._uneditedLayerProps[id];
+			self._backupLayer(layer);
 		}, function (err) {
 			self.panel.error('.button.save');
 			throw err;
@@ -780,7 +786,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.blur();
 		var self = this;
 		this.globalDrawLayer.eachLayer(function (layer) {
-			if (layer.editable) {
+			if (layer.editable && layer !== self.drawLayer) {
 				layer.eachLayer(function (feature) {
 					var edited = false;
 					if (feature instanceof L.FeatureGroup) {
@@ -792,9 +798,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 						feature.edited = edited;
 					}
 					if (feature.edited) {
-						if (feature.refs && feature.refs.id) {
-							self.updateDb(layer);
-						}
+						self._updateDb(layer);
 					}
 				});
 			}
@@ -802,7 +806,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.drawLayer.eachLayer(function (layer) {
 			self._saveDb(layer);
 		});
-		this._uneditedLayerProps = {};
 		this.panel.disableButtons();
 	},
 	cancel: function () {
@@ -1335,11 +1338,17 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this.panel.disableButtons();
 	},
 	save: function (exiting) {
+		this.panel.disableButtons();
 		var self = this;
 		this.newViews.eachLayer(function (view) {
 			view.saveLayer(function () {
 				view.setProperties({edited: false});
 				self.newViews.removeLayer(view);
+				if (exiting !== true) {
+					var id = L.Util.stamp(view);
+					delete self._uneditedLayerProps[id];
+					self._backupLayer(view);
+				}
 			}, function (err) {
 				console.log('error while saving a view: ', view);
 				self.panel.error('.button.save');
@@ -1350,28 +1359,33 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this._deletedLayers.eachLayer(function (view) {
 			view.deleteLayer(function () {
 				self._deletedLayers.removeLayer(view);
+				if (exiting !== true) {
+					var id = L.Util.stamp(view);
+					delete self._uneditedLayerProps[id];
+				}
 			}, function (err) {
 				console.log('error while deleting a view: ', view.refs.id);
 				self.panel.error('.button.delete');
+				self.panel.enableButtons();
 				throw err;
 			});
 		});
 		this.viewLayer.eachLayer(function (view) {
-			if (view.getProperties().edited) {
+			if (view.getProperties().edited && !self.newViews.hasLayer(view)) {
 				view.updateLayer(function () {
 					view.setProperties({edited: false});
+					if (exiting !== true) {
+						var id = L.Util.stamp(view);
+						delete self._uneditedLayerProps[id];
+						self._backupLayer(view);
+					}
 				}, function (err) {
 					self.panel.error('.button.save');
+					self.panel.enableButtons();
 					throw err;
 				});
 			}
 		});
-		if (exiting !== true)
-		{
-			this._uneditedLayerProps = {};
-			this.backup();
-		}
-		this.panel.disableButtons();
 	},
 	_saveOne: function (e) {
 		var self = this;
