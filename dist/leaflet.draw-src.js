@@ -242,13 +242,14 @@ L.Draw.Feature = L.Handler.extend({
 		L.setOptions(this, options);
 	},
 
-	_fireCreatedEvent: function (layer) {
+	_saveDb: function (layer) {
 		//layer is anything but a view!
 		var carte = this._map.carte;
 		var self = this;
 		layer.saveLayer(function () {
 			carte.tilejson.sources[0].stats[self.type]++;
 			carte.redraw();
+			self.drawLayer.removeLayer(layer);
 		}, function (err) {
 			console.log('error while saving a ' + self.type + ': ', layer);
 			self.panel.error('.button.save');
@@ -256,7 +257,19 @@ L.Draw.Feature = L.Handler.extend({
 			throw err;
 		});
 	},
-
+	_updateDb: function (layer) {
+		//layer is anything but a view!
+		var self = this;
+		layer.updateLayer(function () {
+			delete layer.edited;
+			if (self.editedLayers) {
+				self.editedLayers.removeLayer(layer);
+			}
+		}, function (err) {
+			self.panel.error('.button.save');
+			throw err;
+		});
+	},
 	// Cancel drawing when the escape key is pressed
 	_cancelDrawing: function (e) {
 		if (e.keyCode === 27) {
@@ -311,7 +324,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.globalDrawLayer = featureGroup;
 		this.drawLayer = L.featureGroup();
 		this.drawLayer.editable = true;
-		this.editedLayers = L.layerGroup();
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
@@ -761,7 +773,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_fireCreatedEvent: function () {
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
-		// this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
 		this.panel.enableButtons();
 	},
@@ -782,21 +793,15 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 					}
 					if (feature.edited) {
 						if (feature.refs && feature.refs.id) {
-							feature.updateLayer(function () {}, function (err) {
-								this.panel.error('.button.save');
-								throw err;
-							});
+							self.updateDb(layer);
 						}
-						feature.edited = false;
 					}
 				});
 			}
 		});
 		this.drawLayer.eachLayer(function (layer) {
-			L.Draw.Feature.prototype._fireCreatedEvent.call(self, layer);
-			// self.globalDrawLayer.removeLayer(layer);
+			self._saveDb(layer);
 		});
-		this.drawLayer.clearLayers();
 		this._uneditedLayerProps = {};
 		this.panel.disableButtons();
 	},
@@ -1627,21 +1632,12 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	},
 	save: function () {
 		var self = this;
-		this.drawLayer.eachLayer(function (marker) {
-			L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
+		this.drawLayer.eachLayer(function (layer) {
+			self._saveDb(layer);
 		});
 		this.editedLayers.eachLayer(function (layer) {
-			layer.updateLayer(function () {}, function (err) {
-				this.panel.error('.button.save');
-				throw err;
-			});
+			self._updateDb(layer);
 		});
-		this._map.fire('draw:edited', {layers: this.editedLayers});
-		this.editedLayers.eachLayer(function (marker) {
-			delete marker.edited;
-		});
-		this.drawLayer.clearLayers();
-		this.editedLayers.clearLayers();
 		this._uneditedLayerProps = {};
 		this.panel.disableButtons();
 	},
