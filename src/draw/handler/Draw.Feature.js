@@ -135,13 +135,14 @@ L.Draw.Feature = L.Handler.extend({
 		L.setOptions(this, options);
 	},
 
-	_fireCreatedEvent: function (layer) {
+	_saveDb: function (layer) {
 		//layer is anything but a view!
 		var carte = this._map.carte;
 		var self = this;
 		layer.saveLayer(function () {
 			carte.tilejson.sources[0].stats[self.type]++;
 			carte.redraw();
+			self.drawLayer.removeLayer(layer);
 		}, function (err) {
 			console.log('error while saving a ' + self.type + ': ', layer);
 			self.panel.error('.button.save');
@@ -149,7 +150,19 @@ L.Draw.Feature = L.Handler.extend({
 			throw err;
 		});
 	},
-
+	_updateDb: function (layer) {
+		//layer is anything but a view!
+		var self = this;
+		layer.updateLayer(function () {
+			delete layer.edited;
+			if (self.editedLayers) {
+				self.editedLayers.removeLayer(layer);
+			}
+		}, function (err) {
+			self.panel.error('.button.save');
+			throw err;
+		});
+	},
 	// Cancel drawing when the escape key is pressed
 	_cancelDrawing: function (e) {
 		if (e.keyCode === 27) {

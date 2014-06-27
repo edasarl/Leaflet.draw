@@ -114,21 +114,12 @@ L.Draw.Marker = L.Draw.Feature.extend({
 	},
 	save: function () {
 		var self = this;
-		this.drawLayer.eachLayer(function (marker) {
-			L.Draw.Feature.prototype._fireCreatedEvent.call(self, marker);
+		this.drawLayer.eachLayer(function (layer) {
+			self._saveDb(layer);
 		});
 		this.editedLayers.eachLayer(function (layer) {
-			layer.updateLayer(function () {}, function (err) {
-				this.panel.error('.button.save');
-				throw err;
-			});
+			self._updateDb(layer);
 		});
-		this._map.fire('draw:edited', {layers: this.editedLayers});
-		this.editedLayers.eachLayer(function (marker) {
-			delete marker.edited;
-		});
-		this.drawLayer.clearLayers();
-		this.editedLayers.clearLayers();
 		this._uneditedLayerProps = {};
 		this.panel.disableButtons();
 	},

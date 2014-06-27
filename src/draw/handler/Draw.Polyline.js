@@ -44,7 +44,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 		this.globalDrawLayer = featureGroup;
 		this.drawLayer = L.featureGroup();
 		this.drawLayer.editable = true;
-		this.editedLayers = L.layerGroup();
 		this.panel = options.panel;
 		L.Draw.Feature.prototype.initialize.call(this, map, options);
 		var self = this;
@@ -494,7 +493,6 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 
 	_fireCreatedEvent: function () {
 		var poly = new this.Poly(this._poly.getLatLngs(), this.options.shapeOptions);
-		// this.globalDrawLayer.addLayer(poly);
 		this.drawLayer.addLayer(poly);
 		this.panel.enableButtons();
 	},
@@ -515,21 +513,15 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 					}
 					if (feature.edited) {
 						if (feature.refs && feature.refs.id) {
-							feature.updateLayer(function () {}, function (err) {
-								this.panel.error('.button.save');
-								throw err;
-							});
+							self.updateDb(layer);
 						}
-						feature.edited = false;
 					}
 				});
 			}
 		});
 		this.drawLayer.eachLayer(function (layer) {
-			L.Draw.Feature.prototype._fireCreatedEvent.call(self, layer);
-			// self.globalDrawLayer.removeLayer(layer);
+			self._saveDb(layer);
 		});
-		this.drawLayer.clearLayers();
 		this._uneditedLayerProps = {};
 		this.panel.disableButtons();
 	},
