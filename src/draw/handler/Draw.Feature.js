@@ -136,31 +136,17 @@ L.Draw.Feature = L.Handler.extend({
 	},
 
 	_fireCreatedEvent: function (layer) {
-		if (this.type === 'rectangle') {
-			layer.saveLayer(function () {
-				if (layer.saveCb) {
-					layer.saveCb();
-					delete layer.saveCb;
-				}
-			}, function (err) {
-					console.log('error while saving a view: ', layer);
-					this.panel.error('.button.save');
-					this.panel.enableButtons();
-					throw err;
-				}
-			);
-		} else {
-			var carte = this._map.carte;
-			layer.saveLayer(function () {
-				carte.tilejson.sources[0].stats[this.type]++;
-				carte.redraw();
-			}, function (err) {
-				console.log('error while saving a ' + this.type + ': ', layer);
-				this.panel.error('.button.save');
-				this.panel.enableButtons();
-				throw err;
-			});
-		}
+		//layer is anything but a view!
+		var carte = this._map.carte;
+		layer.saveLayer(function () {
+			carte.tilejson.sources[0].stats[this.type]++;
+			carte.redraw();
+		}, function (err) {
+			console.log('error while saving a ' + this.type + ': ', layer);
+			this.panel.error('.button.save');
+			this.panel.enableButtons();
+			throw err;
+		});
 	},
 
 	// Cancel drawing when the escape key is pressed
