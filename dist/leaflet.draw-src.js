@@ -243,31 +243,17 @@ L.Draw.Feature = L.Handler.extend({
 	},
 
 	_fireCreatedEvent: function (layer) {
-		if (this.type === 'rectangle') {
-			layer.saveLayer(function () {
-				if (layer.saveCb) {
-					layer.saveCb();
-					delete layer.saveCb;
-				}
-			}, function (err) {
-					console.log('error while saving a view: ', layer);
-					this.panel.error('.button.save');
-					this.panel.enableButtons();
-					throw err;
-				}
-			);
-		} else {
-			var carte = this._map.carte;
-			layer.saveLayer(function () {
-				carte.tilejson.sources[0].stats[this.type]++;
-				carte.redraw();
-			}, function (err) {
-				console.log('error while saving a ' + this.type + ': ', layer);
-				this.panel.error('.button.save');
-				this.panel.enableButtons();
-				throw err;
-			});
-		}
+		//layer is anything but a view!
+		var carte = this._map.carte;
+		layer.saveLayer(function () {
+			carte.tilejson.sources[0].stats[this.type]++;
+			carte.redraw();
+		}, function (err) {
+			console.log('error while saving a ' + this.type + ': ', layer);
+			this.panel.error('.button.save');
+			this.panel.enableButtons();
+			throw err;
+		});
 	},
 
 	// Cancel drawing when the escape key is pressed
@@ -1345,28 +1331,35 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 	save: function (exiting) {
 		var self = this;
 		this.newViews.eachLayer(function (view) {
-			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
-			view.setProperties({edited: false});
-		});
-		this.newViews.clearLayers();
-		this._deletedLayers.eachLayer(function (view) {
-			view.deleteLayer(function (err) {
-				console.log('error while deleting a view: ', view.refs.id);
-				this.panel.error('.button.delete');
+			view.saveLayer(function () {
+				view.setProperties({edited: false});
+				self.newViews.removeLayer(view);
+			}, function (err) {
+				console.log('error while saving a view: ', view);
+				self.panel.error('.button.save');
+				self.panel.enableButtons();
 				throw err;
 			});
 		});
-		this._deletedLayers.clearLayers();
+		this._deletedLayers.eachLayer(function (view) {
+			view.deleteLayer(function () {
+				self._deletedLayers.removeLayer(view);
+			}, function (err) {
+				console.log('error while deleting a view: ', view.refs.id);
+				self.panel.error('.button.delete');
+				throw err;
+			});
+		});
 		this.viewLayer.eachLayer(function (view) {
 			if (view.getProperties().edited) {
-				view.updateLayer(function () {}, function (err) {
-					this.panel.error('.button.save');
+				view.updateLayer(function () {
+					view.setProperties({edited: false});
+				}, function (err) {
+					self.panel.error('.button.save');
 					throw err;
 				});
-				view.setProperties({edited: false});
 			}
 		});
-		// this._map.fire('draw:edited', {layers: editedLayers});
 		if (exiting !== true)
 		{
 			this._uneditedLayerProps = {};
@@ -1378,15 +1371,22 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		var self = this;
 		var view = this.focused;
 		if (this.newViews.hasLayer(view)) {
-			view.saveCb = e.cb;
-			L.Draw.SimpleShape.prototype._fireCreatedEvent.call(self, view);
-			view.setProperties({edited: false});
-			this.newViews.removeLayer(view);
+			view.saveLayer(function (err, res) {
+				view.setProperties({edited: false});
+				self.newViews.removeLayer(view);
+				e.cb(err, res);
+			}, function (err) {
+				console.log('error while saving a view: ', view);
+				self.panel.error('.button.save');
+				self.panel.enableButtons();
+				throw err;
+			});
 		} else if (view.rectangle.edited) {
-			view.setProperties({edited: false});
-			view.saveCb = e.cb;
-			view.updateLayer(function () {}, function (err) {
-				this.panel.error('.button.save');
+			view.updateLayer(function (err, res) {
+				view.setProperties({edited: false});
+				e.cb(err, res);
+			}, function (err) {
+				self.panel.error('.button.save');
 				throw err;
 			});
 		} else {
