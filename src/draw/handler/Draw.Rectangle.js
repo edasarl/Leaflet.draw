@@ -111,7 +111,7 @@ L.View = L.Class.extend({
 		if (obj.interface) {this._interface = obj.interface; }
 		if (obj.minzoom) {this._minzoom = obj.minzoom; }
 		if (obj.maxzoom) {this._maxzoom = obj.maxzoom; }
-		if (obj.hasOwnProperty('edited')) {this.rectangle.edited = obj.edited; }
+		if ('edited' in obj) {this.rectangle.edited = obj.edited; }
 		return this;
 	},
 	onAdd: function (map) {
