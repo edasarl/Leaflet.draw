@@ -1,6 +1,6 @@
 {
   "name": "leaflet-draw",
-  "version": "0.2.99-47",
+  "version": "0.2.99-48",
   "description": "Vector drawing plugin for Leaflet",
   "devDependencies": {
     "leaflet": "~0.7.0",
