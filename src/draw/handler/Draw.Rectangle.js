@@ -27,7 +27,6 @@ L.View = L.Class.extend({
 		this._minzoom = Math.max(shapeOptions && shapeOptions.minzoom || (this.zoom - 2), this._map.getMinZoom());
 		this._maxzoom = Math.min(shapeOptions && shapeOptions.maxzoom || (this.zoom + 2), this._map.getMaxZoom());
 		this._legend = shapeOptions && shapeOptions.legend || '';
-		this._legendPosition = shapeOptions && shapeOptions.legendPosition || 'left';
 		this.setCoordsMarker();
 	},
 	setCoordsMarker: function () {
@@ -101,8 +100,7 @@ L.View = L.Class.extend({
 			minzoom: this._minzoom,
 			maxzoom: this._maxzoom,
 			fullscreen: this._fullscreen,
-			legend: this._legend,
-			legendPosition: this._legendPosition
+			legend: this._legend
 		};
 		if (!saving) {
 			obj.edited = this.rectangle.edited;
@@ -116,7 +114,6 @@ L.View = L.Class.extend({
 		if (obj.maxzoom) {this._maxzoom = obj.maxzoom; }
 		if ('edited' in obj) {this.rectangle.edited = obj.edited; }
 		if (obj.legend) {this._legend = obj.legend; }
-		if (obj.legendPosition) {this._legendPosition = obj.legendPosition; }
 		return this;
 	},
 	onAdd: function (map) {
