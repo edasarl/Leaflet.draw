@@ -26,7 +26,8 @@ L.View = L.Class.extend({
 		this._interface = shapeOptions && shapeOptions.interface || 'leaflet';
 		this._minzoom = Math.max(shapeOptions && shapeOptions.minzoom || (this.zoom - 2), this._map.getMinZoom());
 		this._maxzoom = Math.min(shapeOptions && shapeOptions.maxzoom || (this.zoom + 2), this._map.getMaxZoom());
-
+		this._legend = shapeOptions && shapeOptions.legend || '';
+		this._legendPosition = shapeOptions && shapeOptions.legendPosition || 'left';
 		this.setCoordsMarker();
 	},
 	setCoordsMarker: function () {
