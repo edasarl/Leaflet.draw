@@ -1142,7 +1142,9 @@ L.View = L.Class.extend({
 			interface: this._interface,
 			minzoom: this._minzoom,
 			maxzoom: this._maxzoom,
-			fullscreen: this._fullscreen
+			fullscreen: this._fullscreen,
+			legend: this._legend,
+			legendPosition: this._legendPosition
 		};
 		if (!saving) {
 			obj.edited = this.rectangle.edited;
@@ -1154,7 +1156,9 @@ L.View = L.Class.extend({
 		if (obj.interface) {this._interface = obj.interface; }
 		if (obj.minzoom) {this._minzoom = obj.minzoom; }
 		if (obj.maxzoom) {this._maxzoom = obj.maxzoom; }
-		if (obj.hasOwnProperty('edited')) {this.rectangle.edited = obj.edited; }
+		if ('edited' in obj) {this.rectangle.edited = obj.edited; }
+		if (obj.legend) {this._legend = obj.legend; }
+		if (obj.legendPosition) {this._legendPosition = obj.legendPosition; }
 		return this;
 	},
 	onAdd: function (map) {
