@@ -1156,7 +1156,7 @@ L.View = L.Class.extend({
 		if (obj.minzoom) {this._minzoom = obj.minzoom; }
 		if (obj.maxzoom) {this._maxzoom = obj.maxzoom; }
 		if ('edited' in obj) {this.rectangle.edited = obj.edited; }
-		if (obj.legend) {this._legend = obj.legend; }
+		if ('legend' in obj) {this._legend = obj.legend; }
 		return this;
 	},
 	onAdd: function (map) {
