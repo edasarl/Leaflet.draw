@@ -512,7 +512,7 @@ L.Draw.Polyline = L.Draw.Feature.extend({
 						feature.edited = edited;
 					}
 					if (feature.edited) {
-						self._updateDb(layer);
+						self._updateDb(feature);
 					}
 				});
 			}
