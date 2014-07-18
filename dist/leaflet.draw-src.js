@@ -1070,6 +1070,8 @@ L.View = L.Class.extend({
 		this._minzoom = Math.max(shapeOptions && shapeOptions.minzoom || (this.zoom - 2), this._map.getMinZoom());
 		this._maxzoom = Math.min(shapeOptions && shapeOptions.maxzoom || (this.zoom + 2), this._map.getMaxZoom());
 		this._legend = shapeOptions && shapeOptions.legend || '';
+		this._position = shapeOptions && shapeOptions.position || '';
+		this._style = shapeOptions && shapeOptions.style || '';
 		this.setCoordsMarker();
 	},
 	setCoordsMarker: function () {
@@ -1143,7 +1145,9 @@ L.View = L.Class.extend({
 			minzoom: this._minzoom,
 			maxzoom: this._maxzoom,
 			fullscreen: this._fullscreen,
-			legend: this._legend
+			legend: this._legend,
+			position: this._position,
+			style: this._style
 		};
 		if (!saving) {
 			obj.edited = this.rectangle.edited;
@@ -1155,6 +1159,8 @@ L.View = L.Class.extend({
 		if (obj.interface) {this._interface = obj.interface; }
 		if (obj.minzoom) {this._minzoom = obj.minzoom; }
 		if (obj.maxzoom) {this._maxzoom = obj.maxzoom; }
+		if (obj.position) {this._position = obj.position; }
+		if ('style' in obj) {this._style = obj.style; }
 		if ('edited' in obj) {this.rectangle.edited = obj.edited; }
 		if ('legend' in obj) {this._legend = obj.legend; }
 		return this;
