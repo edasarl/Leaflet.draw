@@ -246,34 +246,39 @@ L.Draw.Feature = L.Handler.extend({
 		//layer is anything but a view!
 		var carte = this._map.carte;
 		var self = this;
-		layer.saveLayer(function () {
-			carte.tilejson.sources[0].stats[self.type]++;
-			carte.redraw();
-			self.drawLayer.removeLayer(layer);
-			var id = L.Util.stamp(layer);
-			delete self._uneditedLayerProps[id];
-			self._backupLayer(layer);
-		}, function (err) {
-			console.log('error while saving a ' + self.type + ': ', layer);
-			self.panel.error('.button.save');
-			self.panel.enableButtons();
-			throw err;
+		layer.saveLayer(function (err) {
+			if (err) {
+				console.log('error while saving a ' + self.type + ': ', layer);
+				self.panel.error('.button.save');
+				self.panel.enableButtons();
+				throw err;
+			} else {
+				carte.tilejson.sources[0].stats[self.type]++;
+				carte.redraw();
+				self.drawLayer.removeLayer(layer);
+				var id = L.Util.stamp(layer);
+				delete self._uneditedLayerProps[id];
+				self._backupLayer(layer);
+			}
 		});
 	},
 	_updateDb: function (layer) {
 		//layer is anything but a view!
 		var self = this;
-		layer.updateLayer(function () {
-			delete layer.edited;
-			if (self.editedLayers) {
-				self.editedLayers.removeLayer(layer);
+		layer.updateLayer(function (err) {
+			if (err) {
+				console.log('error while updating a geometry: ', layer.refs.id);
+				self.panel.error('.button.save');
+				throw err;
+			} else {
+				delete layer.edited;
+				if (self.editedLayers) {
+					self.editedLayers.removeLayer(layer);
+				}
+				var id = L.Util.stamp(layer);
+				delete self._uneditedLayerProps[id];
+				self._backupLayer(layer);
 			}
-			var id = L.Util.stamp(layer);
-			delete self._uneditedLayerProps[id];
-			self._backupLayer(layer);
-		}, function (err) {
-			self.panel.error('.button.save');
-			throw err;
 		});
 	},
 	// Cancel drawing when the escape key is pressed
@@ -1312,6 +1317,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this.newViews.removeLayer(layer);
 		} else {
 			this._deletedLayers.addLayer(layer);
+			this.panel.enableButtons();
 		}
 
 	},
@@ -1349,48 +1355,56 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 		this.panel.disableButtons();
 		var self = this;
 		this.newViews.eachLayer(function (view) {
-			view.saveLayer(function () {
-				view.setProperties({edited: false});
-				self.newViews.removeLayer(view);
-				if (exiting !== true) {
-					var id = L.Util.stamp(view);
-					delete self._uneditedLayerProps[id];
-					self._backupLayer(view);
-				}
-			}, function (err) {
-				console.log('error while saving a view: ', view);
-				self.panel.error('.button.save');
-				self.panel.enableButtons();
-				throw err;
-			});
-		});
-		this._deletedLayers.eachLayer(function (view) {
-			view.deleteLayer(function () {
-				self._deletedLayers.removeLayer(view);
-				if (exiting !== true) {
-					var id = L.Util.stamp(view);
-					delete self._uneditedLayerProps[id];
-				}
-			}, function (err) {
-				console.log('error while deleting a view: ', view.refs.id);
-				self.panel.error('.button.delete');
-				self.panel.enableButtons();
-				throw err;
-			});
-		});
-		this.viewLayer.eachLayer(function (view) {
-			if (view.getProperties().edited && !self.newViews.hasLayer(view)) {
-				view.updateLayer(function () {
+			view.saveLayer(function (err, res) {
+				if (err) {
+					console.log('error while saving a view: ', view);
+					self.panel.error('.button.save');
+					self.panel.enableButtons();
+					throw err;
+				} else {
+					view.refs = {id: res.split('/').pop()};
 					view.setProperties({edited: false});
+					self.newViews.removeLayer(view);
 					if (exiting !== true) {
 						var id = L.Util.stamp(view);
 						delete self._uneditedLayerProps[id];
 						self._backupLayer(view);
 					}
-				}, function (err) {
-					self.panel.error('.button.save');
+				}
+			});
+		});
+		this._deletedLayers.eachLayer(function (view) {
+			view.deleteLayer(function (err) {
+				if (err) {
+					console.log('error while deleting a view: ', view.refs.id);
+					self.panel.error('.button.delete');
 					self.panel.enableButtons();
 					throw err;
+				} else {
+					self._deletedLayers.removeLayer(view);
+					if (exiting !== true) {
+						var id = L.Util.stamp(view);
+						delete self._uneditedLayerProps[id];
+					}
+				}
+			});
+		});
+		this.viewLayer.eachLayer(function (view) {
+			if (view.getProperties().edited && !self.newViews.hasLayer(view)) {
+				view.updateLayer(function (err) {
+					if (err) {
+						console.log('error while updating a view: ', view.refs.id);
+						self.panel.error('.button.save');
+						self.panel.enableButtons();
+						throw err;
+					} else {
+						view.setProperties({edited: false});
+						if (exiting !== true) {
+							var id = L.Util.stamp(view);
+							delete self._uneditedLayerProps[id];
+							self._backupLayer(view);
+						}
+					}
 				});
 			}
 		});
@@ -1413,35 +1427,40 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			}
 		}
 		if (this.newViews.hasLayer(view)) {
-			view.saveLayer(function () {
-				view.setProperties({edited: false});
-				self.newViews.removeLayer(view);
-				if (e.done) {
-					e.done();
+			view.saveLayer(function (err, res) {
+				if (err) {
+					console.log('error while saving a view: ', view);
+					self.panel.error('.button.save');
+					self.panel.enableButtons();
+					if (e.error) {
+						e.error(err, res);
+					}
+					throw err;
+				} else {
+					view.refs = {id: res.split('/').pop()};
+					view.setProperties({edited: false});
+					self.newViews.removeLayer(view);
+					if (e.done) {
+						e.done();
+					}
+					finalize();
 				}
-				finalize();
-			}, function (err, res) {
-				console.log('error while saving a view: ', view);
-				self.panel.error('.button.save');
-				self.panel.enableButtons();
-				if (e.error) {
-					e.error(err, res);
-				}
-				throw err;
 			});
 		} else if (view.rectangle.edited) {
-			view.updateLayer(function () {
-				view.setProperties({edited: false});
-				if (e.done) {
-					e.done();
+			view.updateLayer(function (err, res) {
+				if (err) {
+					console.log('error while updating a view: ', view.refs.id);
+					if (e.error) {
+						e.error(err, res);
+					}
+					throw err;
+				} else {
+					view.setProperties({edited: false});
+					if (e.done) {
+						e.done();
+					}
+					finalize();
 				}
-				finalize();
-			}, function (err, res) {
-				self.panel.error('.button.save');
-				if (e.error) {
-					e.error(err, res);
-				}
-				throw err;
 			});
 		} else {
 			e.done();
