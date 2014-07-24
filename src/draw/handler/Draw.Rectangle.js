@@ -269,6 +269,7 @@ L.Draw.Rectangle = L.Draw.SimpleShape.extend({
 			this.newViews.removeLayer(layer);
 		} else {
 			this._deletedLayers.addLayer(layer);
+			this.panel.enableButtons();
 		}
 
 	},
