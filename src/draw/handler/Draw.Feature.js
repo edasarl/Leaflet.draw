@@ -139,34 +139,39 @@ L.Draw.Feature = L.Handler.extend({
 		//layer is anything but a view!
 		var carte = this._map.carte;
 		var self = this;
-		layer.saveLayer(function () {
-			carte.tilejson.sources[0].stats[self.type]++;
-			carte.redraw();
-			self.drawLayer.removeLayer(layer);
-			var id = L.Util.stamp(layer);
-			delete self._uneditedLayerProps[id];
-			self._backupLayer(layer);
-		}, function (err) {
-			console.log('error while saving a ' + self.type + ': ', layer);
-			self.panel.error('.button.save');
-			self.panel.enableButtons();
-			throw err;
+		layer.saveLayer(function (err) {
+			if (err) {
+				console.log('error while saving a ' + self.type + ': ', layer);
+				self.panel.error('.button.save');
+				self.panel.enableButtons();
+				throw err;
+			} else {
+				carte.tilejson.sources[0].stats[self.type]++;
+				carte.redraw();
+				self.drawLayer.removeLayer(layer);
+				var id = L.Util.stamp(layer);
+				delete self._uneditedLayerProps[id];
+				self._backupLayer(layer);
+			}
 		});
 	},
 	_updateDb: function (layer) {
 		//layer is anything but a view!
 		var self = this;
-		layer.updateLayer(function () {
-			delete layer.edited;
-			if (self.editedLayers) {
-				self.editedLayers.removeLayer(layer);
+		layer.updateLayer(function (err) {
+			if (err) {
+				console.log('error while updating a geometry: ', layer.refs.id);
+				self.panel.error('.button.save');
+				throw err;
+			} else {
+				delete layer.edited;
+				if (self.editedLayers) {
+					self.editedLayers.removeLayer(layer);
+				}
+				var id = L.Util.stamp(layer);
+				delete self._uneditedLayerProps[id];
+				self._backupLayer(layer);
 			}
-			var id = L.Util.stamp(layer);
-			delete self._uneditedLayerProps[id];
-			self._backupLayer(layer);
-		}, function (err) {
-			self.panel.error('.button.save');
-			throw err;
 		});
 	},
 	// Cancel drawing when the escape key is pressed
